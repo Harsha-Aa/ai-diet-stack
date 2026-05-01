@@ -27,7 +27,7 @@ const ProfilePage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* User Info */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Account Information
@@ -52,7 +52,7 @@ const ProfilePage: React.FC = () => {
         </Grid>
 
         {/* Usage Stats */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Monthly Usage
@@ -84,13 +84,13 @@ const ProfilePage: React.FC = () => {
         </Grid>
 
         {/* Subscription Info */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Subscription Plans
             </Typography>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
@@ -112,7 +112,7 @@ const ProfilePage: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card variant="outlined" sx={{ borderColor: 'primary.main', borderWidth: 2 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom color="primary">
@@ -137,7 +137,7 @@ const ProfilePage: React.FC = () => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="h6" gutterBottom>

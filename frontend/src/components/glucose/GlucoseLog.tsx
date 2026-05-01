@@ -76,7 +76,7 @@ const GlucoseLog: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Entry Form */}
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Add New Reading
@@ -103,7 +103,7 @@ const GlucoseLog: React.FC = () => {
                 onChange={(e) => setValue(e.target.value)}
                 margin="normal"
                 required
-                inputProps={{ min: 20, max: 600, step: 1 }}
+                slotProps={{ htmlInput: { min: 20, max: 600, step: 1 } }}
               />
               <TextField
                 fullWidth
@@ -129,7 +129,7 @@ const GlucoseLog: React.FC = () => {
         </Grid>
 
         {/* Readings History */}
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Recent Readings
@@ -152,7 +152,9 @@ const GlucoseLog: React.FC = () => {
                     <ListItemText
                       primary={`${reading.value} ${reading.unit}`}
                       secondary={new Date(reading.timestamp).toLocaleString()}
-                      primaryTypographyProps={{ fontWeight: 'bold', fontSize: '1.2rem' }}
+                      slotProps={{ 
+                        primary: { sx: { fontWeight: 'bold', fontSize: '1.2rem' } }
+                      }}
                     />
                     {reading.notes && (
                       <Typography variant="body2" color="textSecondary">

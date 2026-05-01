@@ -33,7 +33,7 @@ const Dashboard: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* eA1C Card */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Average Glucose Card */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -67,7 +67,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Time in Range Card */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -89,7 +89,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Glucose Trend Chart */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Today's Glucose Readings
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         {/* Recent Readings */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Recent Readings
@@ -132,7 +132,7 @@ const Dashboard: React.FC = () => {
                 <Typography>
                   {new Date(reading.timestamp).toLocaleString()}
                 </Typography>
-                <Typography fontWeight="bold">
+                <Typography sx={{ fontWeight: 'bold' }}>
                   {reading.value} {reading.unit}
                 </Typography>
                 <Typography color="textSecondary">

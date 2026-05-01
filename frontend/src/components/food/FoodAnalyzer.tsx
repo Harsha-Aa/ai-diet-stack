@@ -61,7 +61,7 @@ const FoodAnalyzer: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Input Section */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Describe Your Meal
@@ -99,7 +99,7 @@ const FoodAnalyzer: React.FC = () => {
         </Grid>
 
         {/* Results Section */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {result ? (
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
@@ -121,31 +121,31 @@ const FoodAnalyzer: React.FC = () => {
               {/* Total Nutrients */}
               <Card sx={{ mb: 2, bgcolor: '#f5f5f5' }}>
                 <CardContent>
-                  <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                  <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                     Total Nutrients
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2">
                         Calories: <strong>{result.totalNutrients.calories}</strong>
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2">
                         Carbs: <strong>{result.totalNutrients.carbs}g</strong>
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2">
                         Protein: <strong>{result.totalNutrients.protein}g</strong>
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2">
                         Fat: <strong>{result.totalNutrients.fat}g</strong>
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Typography variant="body2">
                         Fiber: <strong>{result.totalNutrients.fiber}g</strong>
                       </Typography>
@@ -155,13 +155,13 @@ const FoodAnalyzer: React.FC = () => {
               </Card>
 
               {/* Individual Items */}
-              <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Food Items
               </Typography>
               {result.items.map((item, index) => (
                 <Card key={index} sx={{ mb: 1 }}>
                   <CardContent>
-                    <Typography variant="subtitle2" fontWeight="bold">
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                       {item.name} - {item.portion}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
