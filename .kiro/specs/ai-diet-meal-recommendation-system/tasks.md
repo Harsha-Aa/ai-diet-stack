@@ -115,19 +115,19 @@ Implement usage limit tracking and enforcement for free users.
 - [x] 10.5 Create monthly usage reset Lambda (EventBridge scheduled)
 - [x] 10.6 Create GET /subscription/usage endpoint
 - [x] 10.7 Implement 80% usage warning notifications
-- [ ] 10.8 Write unit tests for usage tracking logic
-- [ ] 10.9 Write property-based tests for usage limit enforcement (Property 1)
+- [x] 10.8 Write unit tests for usage tracking logic
+- [x] 10.9 Write property-based tests for usage limit enforcement (Property 1)
 
 ### Task 11: API Gateway Configuration
 Set up API Gateway with proper routing, validation, and security.
 
-- [ ] 11.1 Create REST API in API Gateway
-- [ ] 11.2 Configure API Gateway routes for all endpoints
-- [ ] 11.3 Set up request/response validation with JSON schemas
-- [ ] 11.4 Configure CORS for mobile app
-- [ ] 11.5 Implement rate limiting (100 req/min per user)
-- [ ] 11.6 Set up API Gateway logging to CloudWatch
-- [ ] 11.7 Create usage plans for free and premium tiers
+- [x] 11.1 Create REST API in API Gateway
+- [x] 11.2 Configure API Gateway routes for all endpoints
+- [x] 11.3 Set up request/response validation with JSON schemas
+- [x] 11.4 Configure CORS for mobile app
+- [x] 11.5 Implement rate limiting (100 req/min per user)
+- [x] 11.6 Set up API Gateway logging to CloudWatch
+- [x] 11.7 Create usage plans for free and premium tiers
 
 ### Task 12: Error Handling and Logging
 Implement comprehensive error handling and structured logging.
