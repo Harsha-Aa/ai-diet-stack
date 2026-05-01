@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   Paper,
@@ -9,15 +9,94 @@ import {
   CardContent,
   Chip,
   LinearProgress,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-import { mockUsageData } from '../../services/mockData';
+import { subscriptionService, UsageData, FeatureUsage } from '../../services/subscriptionService';
+import toast from 'react-hot-toast';
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const foodAnalysisPercentage = (mockUsageData.foodAnalysisCount / mockUsageData.foodAnalysisLimit) * 100;
-  const predictionPercentage = (mockUsageData.predictionCount / mockUsageData.predictionLimit) * 100;
+  useEffect(() => {
+    const fetchUsageData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await subscriptionService.getUsage();
+        setUsageData(data);
+
+        // Show warnings if any
+        if (data.warnings && data.warnings.length > 0) {
+          data.warnings.forEach(warning => {
+            toast.warning(warning, { duration: 5000 });
+          });
+        }
+      } catch (err: any) {
+        console.error('Failed to load usage data:', err);
+        setError('Failed to load usage data. Please try again.');
+        toast.error('Failed to load usage data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsageData();
+  }, []);
+
+  const renderUsageBar = (label: string, usage?: FeatureUsage) => {
+    if (!usage) return null;
+
+    const getColor = (percentage: number) => {
+      if (percentage >= 100) return 'error';
+      if (percentage >= 80) return 'warning';
+      return 'primary';
+    };
+
+    return (
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+          <Typography variant="body2">
+            {label}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            {usage.used} / {usage.limit}
+          </Typography>
+        </Box>
+        <LinearProgress
+          variant="determinate"
+          value={Math.min(usage.percentage, 100)}
+          color={getColor(usage.percentage)}
+          sx={{ height: 8, borderRadius: 4 }}
+        />
+      </Box>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error || !usageData) {
+    return (
+      <Container maxWidth="lg">
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error || 'Failed to load profile data'}
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg">
@@ -42,8 +121,8 @@ const ProfilePage: React.FC = () => {
               <Typography variant="body1" gutterBottom>
                 <strong>Subscription:</strong>{' '}
                 <Chip
-                  label={user?.subscriptionTier.toUpperCase()}
-                  color={user?.subscriptionTier === 'premium' ? 'primary' : 'default'}
+                  label={usageData.subscription_tier.toUpperCase()}
+                  color={usageData.subscription_tier === 'premium' ? 'primary' : 'default'}
                   size="small"
                 />
               </Typography>
@@ -58,28 +137,25 @@ const ProfilePage: React.FC = () => {
               Monthly Usage
             </Typography>
             <Typography variant="body2" color="textSecondary" gutterBottom>
-              Resets on {new Date(mockUsageData.resetDate).toLocaleDateString()}
+              Resets on {new Date(usageData.reset_date).toLocaleDateString()}
             </Typography>
 
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="body2" gutterBottom>
-                Food Analysis: {mockUsageData.foodAnalysisCount} / {mockUsageData.foodAnalysisLimit}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={foodAnalysisPercentage}
-                sx={{ mb: 2, height: 8, borderRadius: 4 }}
-              />
-
-              <Typography variant="body2" gutterBottom>
-                Predictions: {mockUsageData.predictionCount} / {mockUsageData.predictionLimit}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={predictionPercentage}
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
+            {usageData.subscription_tier === 'premium' ? (
+              <Box sx={{ mt: 3 }}>
+                <Alert severity="success">
+                  {usageData.message || 'You have unlimited access to all features'}
+                </Alert>
+              </Box>
+            ) : (
+              <Box sx={{ mt: 3 }}>
+                {renderUsageBar('Food Recognition', usageData.usage.food_recognition)}
+                {renderUsageBar('Glucose Prediction', usageData.usage.glucose_prediction)}
+                {renderUsageBar('Meal Recommendation', usageData.usage.meal_recommendation)}
+                {renderUsageBar('Pattern Analysis', usageData.usage.pattern_analysis)}
+                {renderUsageBar('Voice Entry', usageData.usage.voice_entry)}
+                {renderUsageBar('Insulin Calculator', usageData.usage.insulin_calculator)}
+              </Box>
+            )}
           </Paper>
         </Grid>
 
