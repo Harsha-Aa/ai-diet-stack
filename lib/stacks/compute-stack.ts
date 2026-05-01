@@ -72,9 +72,24 @@ export class ComputeStack extends cdk.Stack {
     props.auditLogsTable.grantReadWriteData(this.lambdaRole);
     props.predictionsTable.grantReadWriteData(this.lambdaRole);
 
-    // Grant permissions for S3 buckets
-    props.foodImagesBucket.grantReadWrite(this.lambdaRole);
-    props.reportsBucket.grantReadWrite(this.lambdaRole);
+    // Grant permissions for S3 buckets (using policy to avoid circular dependency)
+    this.lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:GetObject',
+          's3:PutObject',
+          's3:DeleteObject',
+          's3:ListBucket',
+        ],
+        resources: [
+          props.foodImagesBucket.bucketArn,
+          `${props.foodImagesBucket.bucketArn}/*`,
+          props.reportsBucket.bucketArn,
+          `${props.reportsBucket.bucketArn}/*`,
+        ],
+      })
+    );
 
     // Grant Bedrock permissions
     this.lambdaRole.addToPolicy(
@@ -116,24 +131,35 @@ export class ComputeStack extends cdk.Stack {
       })
     );
 
-    // Grant Secrets Manager permissions
+    // Grant Secrets Manager permissions (using policy to avoid circular dependency)
+    const secretArns: string[] = [];
     if (props.databaseCredentials) {
-      props.databaseCredentials.grantRead(this.lambdaRole);
+      secretArns.push(props.databaseCredentials.secretArn);
     }
     if (props.jwtSecret) {
-      props.jwtSecret.grantRead(this.lambdaRole);
+      secretArns.push(props.jwtSecret.secretArn);
     }
     if (props.encryptionKey) {
-      props.encryptionKey.grantRead(this.lambdaRole);
+      secretArns.push(props.encryptionKey.secretArn);
     }
     if (props.stripeApiKey) {
-      props.stripeApiKey.grantRead(this.lambdaRole);
+      secretArns.push(props.stripeApiKey.secretArn);
     }
     if (props.dexcomApiCredentials) {
-      props.dexcomApiCredentials.grantRead(this.lambdaRole);
+      secretArns.push(props.dexcomApiCredentials.secretArn);
     }
     if (props.libreApiCredentials) {
-      props.libreApiCredentials.grantRead(this.lambdaRole);
+      secretArns.push(props.libreApiCredentials.secretArn);
+    }
+    
+    if (secretArns.length > 0) {
+      this.lambdaRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['secretsmanager:GetSecretValue'],
+          resources: secretArns,
+        })
+      );
     }
 
     // Grant Parameter Store permissions
@@ -218,7 +244,6 @@ export class ComputeStack extends cdk.Stack {
       environment: {
         FOOD_LOGS_TABLE: props.foodLogsTable.tableName,
         NODE_ENV: envConfig.environmentName,
-        AWS_REGION: this.region,
       },
       timeout: cdk.Duration.seconds(10), // AI service timeout (Requirement 9.3)
       memorySize: 512, // Sufficient for Bedrock API calls
@@ -229,8 +254,9 @@ export class ComputeStack extends cdk.Stack {
     // Integrate analyzeText Lambda with API Gateway
     const foodResource = props.api.root.getResource('food');
     if (foodResource) {
-      const analyzeTextResource = foodResource.addResource('analyze-text');
-      analyzeTextResource.addMethod(
+      const analyzeTextResource = foodResource.getResource('analyze-text');
+      if (analyzeTextResource) {
+        analyzeTextResource.addMethod(
         'POST',
         new apigateway.LambdaIntegration(this.analyzeTextLambda, {
           proxy: true,
@@ -257,39 +283,7 @@ export class ComputeStack extends cdk.Stack {
         }
       );
 
-      // Add CORS support for OPTIONS method
-      analyzeTextResource.addMethod(
-        'OPTIONS',
-        new apigateway.MockIntegration({
-          integrationResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Headers':
-                  "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-                'method.response.header.Access-Control-Allow-Methods': "'POST,OPTIONS'",
-                'method.response.header.Access-Control-Allow-Origin': "'*'",
-              },
-            },
-          ],
-          passthroughBehavior: apigateway.PassthroughBehavior.NEVER,
-          requestTemplates: {
-            'application/json': '{"statusCode": 200}',
-          },
-        }),
-        {
-          methodResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Headers': true,
-                'method.response.header.Access-Control-Allow-Methods': true,
-                'method.response.header.Access-Control-Allow-Origin': true,
-              },
-            },
-          ],
-        }
-      );
+      }
     }
 
     // PUT /food/logs/:logId Lambda Function
@@ -310,68 +304,19 @@ export class ComputeStack extends cdk.Stack {
     });
 
     // Integrate updateFoodLog Lambda with API Gateway
+    // Note: This endpoint is not pre-created in ApiStack, so we create it here
     if (foodResource) {
-      const logsResource = foodResource.addResource('logs');
-      const logIdResource = logsResource.addResource('{logId}');
+      const logsResource = foodResource.getResource('logs') || foodResource.addResource('logs');
+      const logIdResource = logsResource.getResource('{logId}') || logsResource.addResource('{logId}');
       
       logIdResource.addMethod(
         'PUT',
         new apigateway.LambdaIntegration(this.updateFoodLogLambda, {
           proxy: true,
-          integrationResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Origin': "'*'",
-              },
-            },
-          ],
         }),
         {
           authorizer: props.authorizer,
           authorizationType: apigateway.AuthorizationType.CUSTOM,
-          methodResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Origin': true,
-              },
-            },
-          ],
-        }
-      );
-
-      // Add CORS support for OPTIONS method
-      logIdResource.addMethod(
-        'OPTIONS',
-        new apigateway.MockIntegration({
-          integrationResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Headers':
-                  "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-                'method.response.header.Access-Control-Allow-Methods': "'PUT,OPTIONS'",
-                'method.response.header.Access-Control-Allow-Origin': "'*'",
-              },
-            },
-          ],
-          passthroughBehavior: apigateway.PassthroughBehavior.NEVER,
-          requestTemplates: {
-            'application/json': '{"statusCode": 200}',
-          },
-        }),
-        {
-          methodResponses: [
-            {
-              statusCode: '200',
-              responseParameters: {
-                'method.response.header.Access-Control-Allow-Headers': true,
-                'method.response.header.Access-Control-Allow-Methods': true,
-                'method.response.header.Access-Control-Allow-Origin': true,
-              },
-            },
-          ],
         }
       );
     }
@@ -393,7 +338,6 @@ export class ComputeStack extends cdk.Stack {
         PREDICTIONS_TABLE: props.predictionsTable.tableName,
         USAGE_TRACKING_TABLE: props.usageTrackingTable.tableName,
         NODE_ENV: envConfig.environmentName,
-        AWS_REGION: this.region,
       },
       timeout: cdk.Duration.seconds(30), // AI service timeout (Bedrock can take longer)
       memorySize: 1024, // More memory for complex AI predictions
@@ -433,39 +377,6 @@ export class ComputeStack extends cdk.Stack {
           }
         );
 
-        // Add CORS support for OPTIONS method
-        predictGlucoseResource.addMethod(
-          'OPTIONS',
-          new apigateway.MockIntegration({
-            integrationResponses: [
-              {
-                statusCode: '200',
-                responseParameters: {
-                  'method.response.header.Access-Control-Allow-Headers':
-                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-                  'method.response.header.Access-Control-Allow-Methods': "'POST,OPTIONS'",
-                  'method.response.header.Access-Control-Allow-Origin': "'*'",
-                },
-              },
-            ],
-            passthroughBehavior: apigateway.PassthroughBehavior.NEVER,
-            requestTemplates: {
-              'application/json': '{"statusCode": 200}',
-            },
-          }),
-          {
-            methodResponses: [
-              {
-                statusCode: '200',
-                responseParameters: {
-                  'method.response.header.Access-Control-Allow-Headers': true,
-                  'method.response.header.Access-Control-Allow-Methods': true,
-                  'method.response.header.Access-Control-Allow-Origin': true,
-                },
-              },
-            ],
-          }
-        );
       }
     }
 
@@ -483,31 +394,26 @@ export class ComputeStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'LambdaRoleArn', {
       value: this.lambdaRole.roleArn,
       description: 'Lambda execution role ARN',
-      exportName: `${envConfig.resourcePrefix}-AiDietLambdaRoleArn`,
     });
 
     new cdk.CfnOutput(this, 'DashboardLambdaArn', {
       value: this.dashboardLambda.functionArn,
       description: 'Dashboard Lambda function ARN',
-      exportName: `${envConfig.resourcePrefix}-DashboardLambdaArn`,
     });
 
     new cdk.CfnOutput(this, 'AnalyzeTextLambdaArn', {
       value: this.analyzeTextLambda.functionArn,
       description: 'Analyze Text Lambda function ARN',
-      exportName: `${envConfig.resourcePrefix}-AnalyzeTextLambdaArn`,
     });
 
     new cdk.CfnOutput(this, 'UpdateFoodLogLambdaArn', {
       value: this.updateFoodLogLambda.functionArn,
       description: 'Update Food Log Lambda function ARN',
-      exportName: `${envConfig.resourcePrefix}-UpdateFoodLogLambdaArn`,
     });
 
     new cdk.CfnOutput(this, 'PredictGlucoseLambdaArn', {
       value: this.predictGlucoseLambda.functionArn,
       description: 'Predict Glucose Lambda function ARN',
-      exportName: `${envConfig.resourcePrefix}-PredictGlucoseLambdaArn`,
     });
   }
 }

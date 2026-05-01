@@ -6,7 +6,7 @@
  * Requirements: 15.1, 15.2
  */
 
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { withAuth } from '../shared/middleware/authMiddleware';
 import { getAllUsage } from '../shared/usageTracking';
 
@@ -24,7 +24,6 @@ const FEATURE_LIMITS: Record<string, number> = {
 
 async function getUsageHandler(
   event: APIGatewayProxyEvent,
-  context: Context,
   user: any
 ): Promise<APIGatewayProxyResult> {
   try {

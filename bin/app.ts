@@ -112,11 +112,8 @@ const computeStack = new ComputeStack(app, `ComputeStack-${environmentName}`, {
   sesFromEmailParameter: secretsStack.sesFromEmail,
   freeTierLimitsParameter: secretsStack.freeTierLimits,
 });
-computeStack.addDependency(authStack);
-computeStack.addDependency(dataStack);
-computeStack.addDependency(storageStack);
-computeStack.addDependency(secretsStack);
-computeStack.addDependency(apiStack);
+// Note: ComputeStack implicitly depends on ApiStack through Lambda integrations
+// No need to explicitly add dependency
 
 // Add termination protection for production
 if (environmentName === 'prod') {
