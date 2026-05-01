@@ -102,7 +102,7 @@ Implement text-based food entry with AI nutrient estimation.
 - [x] 9.6 Allow portion size adjustment and recalculation
 - [x] 9.7 Write unit tests for food parser
 - [x] 9.8 Write property-based tests for food parser round-trip (Property 8)
-- [ ] 9.9 Write property-based tests for multi-item extraction (Property 10)
+- [x] 9.9 Write property-based tests for multi-item extraction (Property 10)
 - [ ] 9.10 Write property-based tests for error handling (Property 9)
 
 ### Task 10: Usage Tracking and Freemium Enforcement (Requirement 15)
