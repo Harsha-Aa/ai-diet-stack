@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Container,
   Box,
@@ -8,28 +9,32 @@ import {
   Typography,
   Paper,
   Link,
-  Alert,
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    
+    if (!email || !password) {
+      toast.error('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await login({ email, password });
+      toast.success('Login successful!');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      toast.error(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,12 +57,6 @@ const LoginPage: React.FC = () => {
           <Typography component="h2" variant="h6" align="center" gutterBottom>
             Sign In
           </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField

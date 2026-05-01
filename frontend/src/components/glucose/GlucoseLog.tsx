@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   Container,
   Paper,
@@ -10,7 +11,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { glucoseService, GlucoseReading } from '../../services/glucoseService';
 
@@ -19,8 +20,7 @@ const GlucoseLog: React.FC = () => {
   const [value, setValue] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [loadingReadings, setLoadingReadings] = useState(true);
 
   useEffect(() => {
     loadReadings();
@@ -28,21 +28,23 @@ const GlucoseLog: React.FC = () => {
 
   const loadReadings = async () => {
     try {
+      setLoadingReadings(true);
       const data = await glucoseService.getReadings();
       setReadings(data);
     } catch (err) {
+      toast.error('Failed to load readings');
       console.error('Failed to load readings:', err);
+    } finally {
+      setLoadingReadings(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess(false);
 
     const glucoseValue = parseFloat(value);
     if (isNaN(glucoseValue) || glucoseValue < 20 || glucoseValue > 600) {
-      setError('Please enter a valid glucose value between 20 and 600 mg/dL');
+      toast.error('Please enter a valid glucose value between 20 and 600 mg/dL');
       return;
     }
 
@@ -57,12 +59,12 @@ const GlucoseLog: React.FC = () => {
       };
 
       await glucoseService.createReading(newReading);
-      setSuccess(true);
+      toast.success('Reading saved successfully!');
       setValue('');
       setNotes('');
       await loadReadings();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save reading');
+      toast.error(err.response?.data?.message || 'Failed to save reading');
     } finally {
       setLoading(false);
     }
@@ -81,18 +83,6 @@ const GlucoseLog: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Add New Reading
             </Typography>
-
-            {success && (
-              <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(false)}>
-                Reading saved successfully!
-              </Alert>
-            )}
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-                {error}
-              </Alert>
-            )}
 
             <Box component="form" onSubmit={handleSubmit}>
               <TextField
@@ -134,13 +124,18 @@ const GlucoseLog: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Recent Readings
             </Typography>
-            <List>
-              {readings.length === 0 ? (
-                <Typography color="textSecondary" align="center" sx={{ py: 3 }}>
-                  No readings yet. Add your first reading!
-                </Typography>
-              ) : (
-                readings.map((reading) => (
+            {loadingReadings ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <List>
+                {readings.length === 0 ? (
+                  <Typography color="textSecondary" align="center" sx={{ py: 3 }}>
+                    No readings yet. Add your first reading!
+                  </Typography>
+                ) : (
+                  readings.map((reading) => (
                   <ListItem
                     key={reading.id}
                     sx={{
@@ -165,6 +160,7 @@ const GlucoseLog: React.FC = () => {
                 ))
               )}
             </List>
+            )}
           </Paper>
         </Grid>
       </Grid>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   AppBar,
   Box,
@@ -13,6 +14,11 @@ import {
   Toolbar,
   Typography,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -32,6 +38,7 @@ const menuItems = [
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -44,9 +51,19 @@ const Layout: React.FC = () => {
     setMobileOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
     logout();
+    setLogoutDialogOpen(false);
+    toast.success('Logged out successfully');
     navigate('/login');
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutDialogOpen(false);
   };
 
   const drawer = (
@@ -90,11 +107,27 @@ const Layout: React.FC = () => {
           <Typography variant="body2" sx={{ mr: 2 }}>
             {user?.name}
           </Typography>
-          <Button color="inherit" onClick={handleLogout}>
+          <Button color="inherit" onClick={handleLogoutClick}>
             Logout
           </Button>
         </Toolbar>
       </AppBar>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={logoutDialogOpen} onClose={handleLogoutCancel}>
+        <DialogTitle>Confirm Logout</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to logout?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel}>Cancel</Button>
+          <Button onClick={handleLogoutConfirm} color="primary" variant="contained">
+            Logout
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Box
         component="nav"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   Container,
   Paper,
@@ -9,7 +10,6 @@ import {
   Grid,
   Card,
   CardContent,
-  Alert,
   CircularProgress,
   Chip,
 } from '@mui/material';
@@ -18,23 +18,22 @@ import { foodService, FoodAnalysisResponse } from '../../services/foodService';
 const FoodAnalyzer: React.FC = () => {
   const [foodText, setFoodText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [result, setResult] = useState<FoodAnalysisResponse | null>(null);
 
   const handleAnalyze = async () => {
     if (!foodText.trim()) {
-      setError('Please enter some food items');
+      toast.error('Please enter some food items');
       return;
     }
 
-    setError('');
     setLoading(true);
 
     try {
       const analysis = await foodService.analyzeFood({ text: foodText });
       setResult(analysis);
+      toast.success('Food analyzed successfully!');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to analyze food. Please try again.');
+      toast.error(err.response?.data?.message || 'Failed to analyze food. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,12 +68,6 @@ const FoodAnalyzer: React.FC = () => {
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
               Enter what you ate or plan to eat. Be as specific as possible with portions.
             </Typography>
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-                {error}
-              </Alert>
-            )}
 
             <TextField
               fullWidth

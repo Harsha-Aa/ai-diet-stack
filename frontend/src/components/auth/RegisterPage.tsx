@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Container,
   Box,
@@ -8,7 +9,6 @@ import {
   Typography,
   Paper,
   Link,
-  Alert,
 } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,22 +17,25 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      toast.error('Password must be at least 8 characters');
       return;
     }
 
@@ -40,9 +43,10 @@ const RegisterPage: React.FC = () => {
 
     try {
       await register({ name, email, password });
+      toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -65,12 +69,6 @@ const RegisterPage: React.FC = () => {
           <Typography component="h2" variant="h6" align="center" gutterBottom>
             Create Account
           </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
