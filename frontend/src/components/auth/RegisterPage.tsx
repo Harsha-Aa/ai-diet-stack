@@ -17,6 +17,10 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [diabetesType, setDiabetesType] = useState<'type1' | 'type2' | 'prediabetes' | 'gestational'>('type2');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +28,7 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword || !age || !weight || !height) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -39,10 +43,37 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    const ageNum = parseInt(age);
+    const weightNum = parseFloat(weight);
+    const heightNum = parseFloat(height);
+
+    if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
+      toast.error('Please enter a valid age (1-120)');
+      return;
+    }
+
+    if (isNaN(weightNum) || weightNum < 20 || weightNum > 500) {
+      toast.error('Please enter a valid weight (20-500 kg)');
+      return;
+    }
+
+    if (isNaN(heightNum) || heightNum < 50 || heightNum > 300) {
+      toast.error('Please enter a valid height (50-300 cm)');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await register({ name, email, password });
+      await register({ 
+        name,
+        email, 
+        password,
+        age: ageNum,
+        weight_kg: weightNum,
+        height_cm: heightNum,
+        diabetes_type: diabetesType
+      });
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (err: any) {
@@ -117,6 +148,59 @@ const RegisterPage: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="age"
+              label="Age"
+              type="number"
+              id="age"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, max: 120 } }}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="weight"
+              label="Weight (kg)"
+              type="number"
+              id="weight"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              slotProps={{ htmlInput: { min: 20, max: 500, step: 0.1 } }}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="height"
+              label="Height (cm)"
+              type="number"
+              id="height"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              slotProps={{ htmlInput: { min: 50, max: 300, step: 0.1 } }}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              select
+              name="diabetesType"
+              label="Diabetes Type"
+              id="diabetesType"
+              value={diabetesType}
+              onChange={(e) => setDiabetesType(e.target.value as any)}
+              SelectProps={{ native: true }}
+            >
+              <option value="type1">Type 1</option>
+              <option value="type2">Type 2</option>
+              <option value="prediabetes">Prediabetes</option>
+              <option value="gestational">Gestational</option>
+            </TextField>
             <Button
               type="submit"
               fullWidth

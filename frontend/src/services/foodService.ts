@@ -38,7 +38,35 @@ export const foodService = {
       return mockFoodAnalysis;
     }
 
-    const response = await apiClient.post('/food/analyze', request);
-    return response.data;
+    // Backend endpoint is /food/analyze-text, not /food/analyze
+    // Backend expects 'description' field, not 'text'
+    const response = await apiClient.post('/food/analyze-text', {
+      description: request.text
+    });
+    
+    const data = response.data.data;
+    
+    // Map backend response (snake_case) to frontend format (camelCase)
+    return {
+      items: data.food_items.map((item: any) => ({
+        name: item.food_name,
+        portion: item.portion_size,
+        nutrients: {
+          calories: item.nutrients.calories,
+          carbs: item.nutrients.carbohydrates_g,
+          protein: item.nutrients.protein_g,
+          fat: item.nutrients.fat_g,
+          fiber: item.nutrients.fiber_g
+        }
+      })),
+      totalNutrients: {
+        calories: data.total_nutrients.calories,
+        carbs: data.total_nutrients.carbohydrates_g,
+        protein: data.total_nutrients.protein_g,
+        fat: data.total_nutrients.fat_g,
+        fiber: data.total_nutrients.fiber_g
+      },
+      estimatedGlucoseImpact: data.estimated_glucose_impact
+    };
   },
 };
