@@ -194,7 +194,7 @@ const RegisterPage: React.FC = () => {
               id="diabetesType"
               value={diabetesType}
               onChange={(e) => setDiabetesType(e.target.value as any)}
-              SelectProps={{ native: true }}
+              slotProps={{ select: { native: true } }}
             >
               <option value="type1">Type 1</option>
               <option value="type2">Type 2</option>

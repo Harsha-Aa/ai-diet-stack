@@ -34,7 +34,7 @@ const ProfilePage: React.FC = () => {
         // Show warnings if any
         if (data.warnings && data.warnings.length > 0) {
           data.warnings.forEach(warning => {
-            toast.warning(warning, { duration: 5000 });
+            toast(warning, { duration: 5000, icon: '⚠️' });
           });
         }
       } catch (err: any) {

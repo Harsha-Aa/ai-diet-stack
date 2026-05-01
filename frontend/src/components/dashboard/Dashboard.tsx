@@ -39,7 +39,7 @@ const Dashboard: React.FC = () => {
         setRecentReadings(readings.slice(0, 10)); // Show last 10 readings
 
         if (analytics.insufficient_data && analytics.message) {
-          toast.info(analytics.message, { duration: 5000 });
+          toast(analytics.message, { duration: 5000, icon: 'ℹ️' });
         }
       } catch (err: any) {
         console.error('Failed to load dashboard data:', err);
