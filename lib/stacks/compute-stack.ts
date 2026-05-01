@@ -23,6 +23,7 @@ export interface ComputeStackProps extends cdk.StackProps {
   aiInsightsTable: dynamodb.ITable;
   providerAccessTable: dynamodb.ITable;
   auditLogsTable: dynamodb.ITable;
+  predictionsTable: dynamodb.ITable;
   foodImagesBucket: s3.IBucket;
   reportsBucket: s3.IBucket;
   api: apigateway.IRestApi;
@@ -45,6 +46,7 @@ export class ComputeStack extends cdk.Stack {
   public readonly dashboardLambda: lambda.Function;
   public readonly analyzeTextLambda: lambda.Function;
   public readonly updateFoodLogLambda: lambda.Function;
+  public readonly predictGlucoseLambda: lambda.Function;
 
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
@@ -68,6 +70,7 @@ export class ComputeStack extends cdk.Stack {
     props.aiInsightsTable.grantReadWriteData(this.lambdaRole);
     props.providerAccessTable.grantReadWriteData(this.lambdaRole);
     props.auditLogsTable.grantReadWriteData(this.lambdaRole);
+    props.predictionsTable.grantReadWriteData(this.lambdaRole);
 
     // Grant permissions for S3 buckets
     props.foodImagesBucket.grantReadWrite(this.lambdaRole);
@@ -373,6 +376,99 @@ export class ComputeStack extends cdk.Stack {
       );
     }
 
+    // ========================================
+    // AI Lambda Functions
+    // ========================================
+
+    // POST /ai/predict-glucose Lambda Function
+    this.predictGlucoseLambda = new lambda.Function(this, 'PredictGlucoseLambda', {
+      functionName: getResourceName(envConfig, 'predict-glucose'),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'predictGlucose.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../dist/src/ai')),
+      role: this.lambdaRole,
+      environment: {
+        GLUCOSE_READINGS_TABLE: props.glucoseReadingsTable.tableName,
+        FOOD_LOGS_TABLE: props.foodLogsTable.tableName,
+        PREDICTIONS_TABLE: props.predictionsTable.tableName,
+        USAGE_TRACKING_TABLE: props.usageTrackingTable.tableName,
+        NODE_ENV: envConfig.environmentName,
+        AWS_REGION: this.region,
+      },
+      timeout: cdk.Duration.seconds(30), // AI service timeout (Bedrock can take longer)
+      memorySize: 1024, // More memory for complex AI predictions
+      description: 'POST /ai/predict-glucose - AI-powered glucose predictions using Bedrock (Requirement 5)',
+      logRetention: envConfig.logRetention,
+    });
+
+    // Integrate predictGlucose Lambda with API Gateway
+    const aiResource = props.api.root.getResource('ai');
+    if (aiResource) {
+      const predictGlucoseResource = aiResource.getResource('predict-glucose');
+      if (predictGlucoseResource) {
+        predictGlucoseResource.addMethod(
+          'POST',
+          new apigateway.LambdaIntegration(this.predictGlucoseLambda, {
+            proxy: true,
+            integrationResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': "'*'",
+                },
+              },
+            ],
+          }),
+          {
+            authorizer: props.authorizer,
+            authorizationType: apigateway.AuthorizationType.CUSTOM,
+            methodResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': true,
+                },
+              },
+            ],
+          }
+        );
+
+        // Add CORS support for OPTIONS method
+        predictGlucoseResource.addMethod(
+          'OPTIONS',
+          new apigateway.MockIntegration({
+            integrationResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Headers':
+                    "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                  'method.response.header.Access-Control-Allow-Methods': "'POST,OPTIONS'",
+                  'method.response.header.Access-Control-Allow-Origin': "'*'",
+                },
+              },
+            ],
+            passthroughBehavior: apigateway.PassthroughBehavior.NEVER,
+            requestTemplates: {
+              'application/json': '{"statusCode": 200}',
+            },
+          }),
+          {
+            methodResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Headers': true,
+                  'method.response.header.Access-Control-Allow-Methods': true,
+                  'method.response.header.Access-Control-Allow-Origin': true,
+                },
+              },
+            ],
+          }
+        );
+      }
+    }
+
     // TODO: Lambda functions will be added in subsequent tasks
     // This stack serves as a placeholder for compute resources
     // Future tasks will add:
@@ -406,6 +502,12 @@ export class ComputeStack extends cdk.Stack {
       value: this.updateFoodLogLambda.functionArn,
       description: 'Update Food Log Lambda function ARN',
       exportName: `${envConfig.resourcePrefix}-UpdateFoodLogLambdaArn`,
+    });
+
+    new cdk.CfnOutput(this, 'PredictGlucoseLambdaArn', {
+      value: this.predictGlucoseLambda.functionArn,
+      description: 'Predict Glucose Lambda function ARN',
+      exportName: `${envConfig.resourcePrefix}-PredictGlucoseLambdaArn`,
     });
   }
 }

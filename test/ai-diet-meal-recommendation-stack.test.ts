@@ -48,6 +48,7 @@ describe('Modular Stack Structure', () => {
       aiInsightsTable: dataStack.aiInsightsTable,
       providerAccessTable: dataStack.providerAccessTable,
       auditLogsTable: dataStack.auditLogsTable,
+      predictionsTable: dataStack.predictionsTable,
       foodImagesBucket: storageStack.foodImagesBucket,
       reportsBucket: storageStack.reportsBucket,
       api: apiStack.api,

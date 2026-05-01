@@ -180,13 +180,13 @@ Implement image-based food recognition and nutrient estimation.
 ### Task 16: Glucose Prediction Engine (Requirement 5)
 Implement AI-powered glucose prediction using Bedrock.
 
-- [ ] 16.1 Create POST /ai/predict-glucose Lambda function
-- [ ] 16.2 Build glucose prediction prompt template
-- [ ] 16.3 Integrate Bedrock (Claude 3 Sonnet) for predictions
-- [ ] 16.4 Generate predictions for 30, 60, 120 minute intervals
-- [ ] 16.5 Calculate confidence intervals
-- [ ] 16.6 Store predictions in DynamoDB for accuracy tracking
-- [ ] 16.7 Apply usage limits for free users (20/month)
+- [x] 16.1 Create POST /ai/predict-glucose Lambda function
+- [x] 16.2 Build glucose prediction prompt template
+- [x] 16.3 Integrate Bedrock (Claude 3 Sonnet) for predictions
+- [x] 16.4 Generate predictions for 30, 60, 120 minute intervals
+- [x] 16.5 Calculate confidence intervals
+- [x] 16.6 Store predictions in DynamoDB for accuracy tracking
+- [x] 16.7 Apply usage limits for free users (20/month)
 - [ ] 16.8 Write unit tests for prediction logic
 
 ### Task 17: Meal Recommendations (Requirement 6)

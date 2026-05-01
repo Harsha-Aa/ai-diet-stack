@@ -95,6 +95,7 @@ const computeStack = new ComputeStack(app, `ComputeStack-${environmentName}`, {
   aiInsightsTable: dataStack.aiInsightsTable,
   providerAccessTable: dataStack.providerAccessTable,
   auditLogsTable: dataStack.auditLogsTable,
+  predictionsTable: dataStack.predictionsTable,
   foodImagesBucket: storageStack.foodImagesBucket,
   reportsBucket: storageStack.reportsBucket,
   api: apiStack.api,

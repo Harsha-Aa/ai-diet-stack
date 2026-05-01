@@ -20,6 +20,7 @@ export class DataStack extends cdk.Stack {
   public readonly aiInsightsTable: dynamodb.Table;
   public readonly providerAccessTable: dynamodb.Table;
   public readonly auditLogsTable: dynamodb.Table;
+  public readonly predictionsTable: dynamodb.Table;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -191,6 +192,29 @@ export class DataStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    // Predictions Table (for glucose prediction accuracy tracking)
+    this.predictionsTable = new dynamodb.Table(this, 'PredictionsTable', {
+      tableName: getResourceName(envConfig, 'ai-diet-predictions'),
+      partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'prediction_id', type: dynamodb.AttributeType.STRING },
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
+      encryptionKey,
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: envConfig.enablePointInTimeRecovery,
+      timeToLiveAttribute: 'ttl', // Auto-delete predictions after 90 days
+      removalPolicy: envConfig.removalPolicy === 'DESTROY' 
+        ? cdk.RemovalPolicy.DESTROY 
+        : cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Add GSI for timestamp-based queries
+    this.predictionsTable.addGlobalSecondaryIndex({
+      indexName: 'TimestampIndex',
+      partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // Stack Outputs
     new cdk.CfnOutput(this, 'UsersTableName', {
       value: this.usersTable.tableName,
@@ -244,6 +268,12 @@ export class DataStack extends cdk.Stack {
       value: this.auditLogsTable.tableName,
       description: 'DynamoDB table for audit logs',
       exportName: `${envConfig.resourcePrefix}-AiDietAuditLogsTable`,
+    });
+
+    new cdk.CfnOutput(this, 'PredictionsTableName', {
+      value: this.predictionsTable.tableName,
+      description: 'DynamoDB table for glucose predictions',
+      exportName: `${envConfig.resourcePrefix}-AiDietPredictionsTable`,
     });
   }
 }
