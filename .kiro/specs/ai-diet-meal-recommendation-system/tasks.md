@@ -167,15 +167,15 @@ Deploy MVP to AWS and set up basic monitoring.
 ### Task 15: AI Food Recognition with Rekognition (Requirement 4)
 Implement image-based food recognition and nutrient estimation.
 
-- [ ] 15.1 Create POST /food/upload-image Lambda function
-- [ ] 15.2 Generate pre-signed S3 URLs for image uploads
-- [ ] 15.3 Create POST /food/recognize Lambda function
-- [ ] 15.4 Integrate Amazon Rekognition for food detection
-- [ ] 15.5 Filter Rekognition labels for food-related items
-- [ ] 15.6 Use Bedrock to estimate nutrients from detected foods
-- [ ] 15.7 Handle low-confidence results (< 60%)
-- [ ] 15.8 Apply usage limits for free users (25/month)
-- [ ] 15.9 Write integration tests with mocked Rekognition
+- [x] 15.1 Create POST /food/upload-image Lambda function
+- [x] 15.2 Generate pre-signed S3 URLs for image uploads
+- [x] 15.3 Create POST /food/recognize Lambda function
+- [x] 15.4 Integrate Amazon Rekognition for food detection
+- [x] 15.5 Filter Rekognition labels for food-related items
+- [x] 15.6 Use Bedrock to estimate nutrients from detected foods
+- [x] 15.7 Handle low-confidence results (< 60%)
+- [x] 15.8 Apply usage limits for free users (25/month)
+- [-] 15.9 Write integration tests with mocked Rekognition
 
 ### Task 16: Glucose Prediction Engine (Requirement 5)
 Implement AI-powered glucose prediction using Bedrock.
