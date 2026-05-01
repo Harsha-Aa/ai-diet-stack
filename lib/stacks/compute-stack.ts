@@ -175,6 +175,124 @@ export class ComputeStack extends cdk.Stack {
     );
 
     // ========================================
+    // Auth Lambda Functions
+    // ========================================
+
+    // POST /auth/register Lambda Function
+    const registerLambda = new lambda.Function(this, 'RegisterLambda', {
+      functionName: getResourceName(envConfig, 'register'),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'register.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../dist/src/auth')),
+      role: this.lambdaRole,
+      environment: {
+        USER_POOL_ID: props.userPool.userPoolId,
+        USERS_TABLE: props.userProfilesTable.tableName,
+        NODE_ENV: envConfig.environmentName,
+      },
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      description: 'POST /auth/register - User registration',
+      logRetention: envConfig.logRetention,
+    });
+
+    // POST /auth/login Lambda Function
+    const loginLambda = new lambda.Function(this, 'LoginLambda', {
+      functionName: getResourceName(envConfig, 'login'),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'login.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../dist/src/auth')),
+      role: this.lambdaRole,
+      environment: {
+        USER_POOL_ID: props.userPool.userPoolId,
+        USERS_TABLE: props.userProfilesTable.tableName,
+        NODE_ENV: envConfig.environmentName,
+      },
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      description: 'POST /auth/login - User login',
+      logRetention: envConfig.logRetention,
+    });
+
+    // Grant Cognito permissions to auth Lambdas
+    this.lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminSetUserPassword',
+          'cognito-idp:AdminInitiateAuth',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminUpdateUserAttributes',
+        ],
+        resources: [props.userPool.userPoolArn],
+      })
+    );
+
+    // Integrate register Lambda with API Gateway
+    const authResource = props.api.root.getResource('auth');
+    if (authResource) {
+      const registerResource = authResource.getResource('register');
+      if (registerResource) {
+        registerResource.addMethod(
+          'POST',
+          new apigateway.LambdaIntegration(registerLambda, {
+            proxy: true,
+            integrationResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': "'*'",
+                },
+              },
+            ],
+          }),
+          {
+            authorizationType: apigateway.AuthorizationType.NONE,
+            methodResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': true,
+                },
+              },
+            ],
+          }
+        );
+      }
+
+      // Integrate login Lambda with API Gateway
+      const loginResource = authResource.getResource('login');
+      if (loginResource) {
+        loginResource.addMethod(
+          'POST',
+          new apigateway.LambdaIntegration(loginLambda, {
+            proxy: true,
+            integrationResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': "'*'",
+                },
+              },
+            ],
+          }),
+          {
+            authorizationType: apigateway.AuthorizationType.NONE,
+            methodResponses: [
+              {
+                statusCode: '200',
+                responseParameters: {
+                  'method.response.header.Access-Control-Allow-Origin': true,
+                },
+              },
+            ],
+          }
+        );
+      }
+    }
+
+    // ========================================
     // Analytics Lambda Functions
     // ========================================
 
