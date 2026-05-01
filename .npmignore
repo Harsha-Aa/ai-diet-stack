@@ -1,0 +1,30 @@
+# Source files
+*.ts
+!*.d.ts
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# Tests
+test/
+*.test.ts
+coverage/
+
+# Documentation
+*.md
+!README.md
+
+# Configuration
+tsconfig.json
+jest.config.js
+.eslintrc.json
+.prettierrc
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore

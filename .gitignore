@@ -1,0 +1,98 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Production builds
+dist/
+build/
+*.js
+*.d.ts
+*.js.map
+*.d.ts.map
+
+# CDK specific
+cdk.out/
+.cdk.staging/
+cdk.context.json
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# AWS credentials and config
+.aws/
+aws-exports.js
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Package manager
+.yarn/
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# TypeScript
+*.tsbuildinfo
+
+# Property-based testing
+.fast-check/
+
+# Secrets and sensitive data
+*.pem
+*.key
+*.cert
+secrets.json
+config.production.json
+
+# CDK asset staging
+.cdk.staging/
+cdk.out/
+
+# Lambda layer dependencies
+lambda-layers/*/nodejs/node_modules/
+
+# Mobile app specific (React Native)
+mobile/.expo/
+mobile/.expo-shared/
+mobile/android/app/build/
+mobile/ios/Pods/
+mobile/ios/build/
+
+# Reports and documentation artifacts
+reports/*.pdf
+*.zip
+*.tar.gz
