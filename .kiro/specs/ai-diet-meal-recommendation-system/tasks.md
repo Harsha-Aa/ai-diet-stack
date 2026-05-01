@@ -132,24 +132,24 @@ Set up API Gateway with proper routing, validation, and security.
 ### Task 12: Error Handling and Logging
 Implement comprehensive error handling and structured logging.
 
-- [ ] 12.1 Create custom error classes (ValidationError, UsageLimitError, etc.)
-- [ ] 12.2 Implement centralized error handler middleware
-- [ ] 12.3 Create structured logger utility (JSON format)
-- [ ] 12.4 Implement error response formatting
-- [ ] 12.5 Set up CloudWatch log groups with retention policies
-- [ ] 12.6 Write unit tests for error handling
+- [x] 12.1 Create custom error classes (ValidationError, UsageLimitError, etc.)
+- [x] 12.2 Implement centralized error handler middleware
+- [x] 12.3 Create structured logger utility (JSON format)
+- [x] 12.4 Implement error response formatting
+- [x] 12.5 Set up CloudWatch log groups with retention policies
+- [x] 12.6 Write unit tests for error handling
 
 ### Task 13: Testing Infrastructure
 Set up comprehensive testing framework and initial test suites.
 
-- [ ] 13.1 Configure Jest for unit testing
-- [ ] 13.2 Configure fast-check for property-based testing
-- [ ] 13.3 Set up AWS SDK mocks (aws-sdk-client-mock)
-- [ ] 13.4 Create test data factories and fixtures
-- [ ] 13.5 Set up test coverage reporting (80% target)
-- [ ] 13.6 Configure CI/CD to run tests on every commit
-- [ ] 13.7 Write example unit tests for each Lambda function
-- [ ] 13.8 Write example property-based tests for calculations
+- [x] 13.1 Configure Jest for unit testing
+- [x] 13.2 Configure fast-check for property-based testing
+- [x] 13.3 Set up AWS SDK mocks (aws-sdk-client-mock)
+- [x] 13.4 Create test data factories and fixtures
+- [x] 13.5 Set up test coverage reporting (80% target)
+- [x] 13.6 Configure CI/CD to run tests on every commit
+- [x] 13.7 Write example unit tests for each Lambda function
+- [x] 13.8 Write example property-based tests for calculations
 
 ### Task 14: Deployment and Monitoring
 Deploy MVP to AWS and set up basic monitoring.
