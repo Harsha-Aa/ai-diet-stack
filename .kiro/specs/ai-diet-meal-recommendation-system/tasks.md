@@ -175,7 +175,7 @@ Implement image-based food recognition and nutrient estimation.
 - [x] 15.6 Use Bedrock to estimate nutrients from detected foods
 - [x] 15.7 Handle low-confidence results (< 60%)
 - [x] 15.8 Apply usage limits for free users (25/month)
-- [-] 15.9 Write integration tests with mocked Rekognition
+- [x] 15.9 Write integration tests with mocked Rekognition
 
 ### Task 16: Glucose Prediction Engine (Requirement 5)
 Implement AI-powered glucose prediction using Bedrock.

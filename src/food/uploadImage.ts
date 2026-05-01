@@ -84,7 +84,6 @@ async function generatePresignedUrl(
  */
 async function uploadImageHandler(
   event: APIGatewayProxyEvent,
-  context: Context,
   user: any
 ): Promise<APIGatewayProxyResult> {
   const userId = user.sub;
@@ -122,9 +121,10 @@ async function uploadImageHandler(
   };
 }
 
-// Apply middleware: auth -> usage limit (25/month for free users) -> error handling
-export const handler = withErrorHandler(
-  withAuth(
-    withUsageLimit(uploadImageHandler, 'food_recognition', 25)
-  )
+// Apply middleware: usage limit -> auth
+export const handler = withUsageLimit({ featureName: 'food_recognition', limit: 25 })(
+  withAuth(uploadImageHandler)
 );
+
+// Export unwrapped handler for testing
+export { uploadImageHandler };

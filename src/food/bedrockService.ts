@@ -16,7 +16,7 @@ import {
   InvokeModelCommand,
   InvokeModelCommandInput,
 } from '@aws-sdk/client-bedrock-runtime';
-import { bedrockNutrientResponseSchema, BedrockNutrientResponse } from './validators';
+import { bedrockNutrientResponseSchema, BedrockNutrientResponse, FoodItem } from './validators';
 
 // Initialize Bedrock client (reused across Lambda invocations)
 let bedrockClient: BedrockRuntimeClient | null = null;
@@ -209,6 +209,21 @@ export async function invokeBedrockForNutrients(
     `AI service failed after ${maxRetries} attempts`,
     lastError || undefined
   );
+}
+
+/**
+ * Wrapper function for estimating nutrients from Bedrock
+ * Returns just the food items array for convenience
+ * 
+ * @param foodDescription - Text description of food
+ * @returns Array of food items with nutrients
+ * @throws BedrockServiceError if service fails
+ */
+export async function estimateNutrientsFromBedrock(
+  foodDescription: string
+): Promise<FoodItem[]> {
+  const response = await invokeBedrockForNutrients(foodDescription);
+  return response.food_items;
 }
 
 /**

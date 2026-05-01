@@ -192,6 +192,10 @@ export const createTestAPIGatewayEvent = (overrides?: Partial<any>) => ({
   pathParameters: null,
   body: null,
   isBase64Encoded: false,
+  multiValueHeaders: {},
+  multiValueQueryStringParameters: null,
+  stageVariables: null,
+  resource: '/test',
   requestContext: {
     requestId: ulid(),
     accountId: '123456789012',
@@ -235,7 +239,7 @@ export const createTestLambdaContext = (overrides?: Partial<any>) => ({
  * Bedrock Response Test Data
  */
 export const createTestBedrockResponse = (overrides?: Partial<any>) => ({
-  body: new TextEncoder().encode(
+  body: Buffer.from(
     JSON.stringify({
       content: [
         {
@@ -257,7 +261,7 @@ export const createTestBedrockResponse = (overrides?: Partial<any>) => ({
         },
       ],
     })
-  ),
+  ) as any,
   ...overrides,
 });
 

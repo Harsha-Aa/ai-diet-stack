@@ -203,7 +203,6 @@ async function verifyImageExists(bucket: string, imageKey: string): Promise<bool
  */
 async function recognizeFoodHandler(
   event: APIGatewayProxyEvent,
-  context: Context,
   user: any
 ): Promise<APIGatewayProxyResult> {
   const userId = user.sub;
@@ -304,9 +303,10 @@ async function recognizeFoodHandler(
   };
 }
 
-// Apply middleware: auth -> usage limit (25/month for free users) -> error handling
-export const handler = withErrorHandler(
-  withAuth(
-    withUsageLimit(recognizeFoodHandler, 'food_recognition', 25)
-  )
+// Apply middleware: usage limit -> auth
+export const handler = withUsageLimit({ featureName: 'food_recognition', limit: 25 })(
+  withAuth(recognizeFoodHandler)
 );
+
+// Export unwrapped handler for testing
+export { recognizeFoodHandler };
