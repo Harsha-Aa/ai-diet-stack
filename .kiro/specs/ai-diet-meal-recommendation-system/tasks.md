@@ -108,13 +108,13 @@ Implement text-based food entry with AI nutrient estimation.
 ### Task 10: Usage Tracking and Freemium Enforcement (Requirement 15)
 Implement usage limit tracking and enforcement for free users.
 
-- [ ] 10.1 Create usage tracking middleware for Lambda functions
-- [ ] 10.2 Implement checkUsageLimit function (query UsageTracking table)
-- [ ] 10.3 Implement incrementUsage function (atomic counter update)
-- [ ] 10.4 Return 429 error with upgrade prompt when limit exceeded
-- [ ] 10.5 Create monthly usage reset Lambda (EventBridge scheduled)
-- [ ] 10.6 Create GET /subscription/usage endpoint
-- [ ] 10.7 Implement 80% usage warning notifications
+- [x] 10.1 Create usage tracking middleware for Lambda functions
+- [x] 10.2 Implement checkUsageLimit function (query UsageTracking table)
+- [x] 10.3 Implement incrementUsage function (atomic counter update)
+- [x] 10.4 Return 429 error with upgrade prompt when limit exceeded
+- [x] 10.5 Create monthly usage reset Lambda (EventBridge scheduled)
+- [x] 10.6 Create GET /subscription/usage endpoint
+- [x] 10.7 Implement 80% usage warning notifications
 - [ ] 10.8 Write unit tests for usage tracking logic
 - [ ] 10.9 Write property-based tests for usage limit enforcement (Property 1)
 
