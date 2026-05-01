@@ -328,121 +328,141 @@ async function predictGlucoseHandler(
   event: APIGatewayProxyEvent,
   user: AuthenticatedUser
 ): Promise<APIGatewayProxyResult> {
-  const userId = user.userId;
-  
-  // Parse and validate request body
-  if (!event.body) {
-    throw new ValidationError('Request body is required');
-  }
-  
-  const body = JSON.parse(event.body);
-  const validationResult = predictGlucoseRequestSchema.safeParse(body);
-  
-  if (!validationResult.success) {
-    throw new ValidationError('Invalid request body', {
-      errors: validationResult.error.errors,
-    });
-  }
-  
-  const request = validationResult.data;
-  
-  logger.info('Glucose prediction request', {
-    userId,
-    currentGlucose: request.current_glucose,
-    hasMeal: !!request.meal_nutrients,
-    activityLevel: request.activity_level,
-  });
-  
-  // Fetch historical data for context
-  const [recentReadings, recentMeals] = await Promise.all([
-    getRecentGlucoseReadings(userId, 24),
-    getRecentMeals(userId, 4),
-  ]);
-  
-  // Check if user has sufficient data
-  const hasInsufficientData = recentReadings.length < 10;
-  
-  // Generate predictions using Bedrock with fallback to baseline
-  let predictions: GlucosePrediction[];
-  let usedBedrock = false;
-  
   try {
-    predictions = await generateBedrockPredictions(
+    const userId = user.userId;
+    
+    // Parse and validate request body
+    if (!event.body) {
+      throw new ValidationError('Request body is required');
+    }
+    
+    const body = JSON.parse(event.body);
+    const validationResult = predictGlucoseRequestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      throw new ValidationError('Invalid request body', {
+        errors: validationResult.error.errors,
+      });
+    }
+    
+    const request = validationResult.data;
+    
+    logger.info('Glucose prediction request', {
       userId,
-      request,
-      recentReadings,
-      recentMeals,
-      user
-    );
-    usedBedrock = true;
+      currentGlucose: request.current_glucose,
+      hasMeal: !!request.meal_nutrients,
+      activityLevel: request.activity_level,
+    });
+    
+    // Fetch historical data for context
+    const [recentReadings, recentMeals] = await Promise.all([
+      getRecentGlucoseReadings(userId, 24),
+      getRecentMeals(userId, 4),
+    ]);
+    
+    // Check if user has sufficient data
+    const hasInsufficientData = recentReadings.length < 10;
+    
+    // Generate predictions using Bedrock with fallback to baseline
+    let predictions: GlucosePrediction[];
+    let usedBedrock = false;
+    
+    try {
+      predictions = await generateBedrockPredictions(
+        userId,
+        request,
+        recentReadings,
+        recentMeals,
+        user
+      );
+      usedBedrock = true;
+    } catch (error) {
+      logger.warn('Bedrock prediction failed, using baseline predictions', { userId, error });
+      predictions = calculateBaselinePredictions(
+        request.current_glucose,
+        request.meal_nutrients,
+        request.activity_level
+      );
+    }
+    
+    // Generate prediction ID
+    const predictionId = ulid();
+    
+    // Store prediction for accuracy tracking
+    await storePrediction(userId, predictionId, request, predictions);
+    
+    // Build response
+    const factorsConsidered: string[] = [
+      'Current glucose level',
+    ];
+    
+    if (request.meal_nutrients) {
+      factorsConsidered.push('Recent meal nutrients');
+    }
+    
+    if (request.activity_level !== 'none') {
+      factorsConsidered.push('Activity level');
+    }
+    
+    if (recentReadings.length > 0) {
+      factorsConsidered.push(`${recentReadings.length} recent glucose readings`);
+    }
+    
+    if (recentMeals.length > 0) {
+      factorsConsidered.push(`${recentMeals.length} recent meals`);
+    }
+    
+    const accuracyNote = hasInsufficientData
+      ? 'Predictions may be less accurate due to limited historical data (< 7 days). Continue logging glucose readings to improve accuracy.'
+      : 'Predictions based on your historical patterns and current factors.';
+    
+    const response: PredictionResponse = {
+      prediction_id: predictionId,
+      current_glucose: request.current_glucose,
+      predictions,
+      factors_considered: factorsConsidered,
+      accuracy_note: accuracyNote,
+      created_at: new Date().toISOString(),
+    };
+    
+    logger.info('Glucose prediction completed', {
+      userId,
+      predictionId,
+      predictionsCount: predictions.length,
+      hasInsufficientData,
+      usedBedrock,
+    });
+    
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({
+        success: true,
+        data: response,
+      }),
+    };
   } catch (error) {
-    logger.warn('Bedrock prediction failed, using baseline predictions', { userId, error });
-    predictions = calculateBaselinePredictions(
-      request.current_glucose,
-      request.meal_nutrients,
-      request.activity_level
-    );
+    // Handle validation errors
+    if (error instanceof ValidationError) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          error: error.message,
+          details: error.details,
+        }),
+      };
+    }
+    
+    // Re-throw other errors to be handled by error middleware
+    throw error;
   }
-  
-  // Generate prediction ID
-  const predictionId = ulid();
-  
-  // Store prediction for accuracy tracking
-  await storePrediction(userId, predictionId, request, predictions);
-  
-  // Build response
-  const factorsConsidered: string[] = [
-    'Current glucose level',
-  ];
-  
-  if (request.meal_nutrients) {
-    factorsConsidered.push('Recent meal nutrients');
-  }
-  
-  if (request.activity_level !== 'none') {
-    factorsConsidered.push('Activity level');
-  }
-  
-  if (recentReadings.length > 0) {
-    factorsConsidered.push(`${recentReadings.length} recent glucose readings`);
-  }
-  
-  if (recentMeals.length > 0) {
-    factorsConsidered.push(`${recentMeals.length} recent meals`);
-  }
-  
-  const accuracyNote = hasInsufficientData
-    ? 'Predictions may be less accurate due to limited historical data (< 7 days). Continue logging glucose readings to improve accuracy.'
-    : 'Predictions based on your historical patterns and current factors.';
-  
-  const response: PredictionResponse = {
-    prediction_id: predictionId,
-    current_glucose: request.current_glucose,
-    predictions,
-    factors_considered: factorsConsidered,
-    accuracy_note: accuracyNote,
-    created_at: new Date().toISOString(),
-  };
-  
-  logger.info('Glucose prediction completed', {
-    userId,
-    predictionId,
-    predictionsCount: predictions.length,
-    hasInsufficientData,
-    usedBedrock,
-  });
-  
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-    body: JSON.stringify({
-      success: true,
-      data: response,
-    }),
-  };
 }
 
 // Apply middleware: usage limit (20/month) -> auth
