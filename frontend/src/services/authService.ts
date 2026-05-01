@@ -2,7 +2,7 @@ import apiClient from './api';
 import { mockUser } from './mockData';
 
 // Toggle between mock and real API
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface LoginCredentials {
   email: string;

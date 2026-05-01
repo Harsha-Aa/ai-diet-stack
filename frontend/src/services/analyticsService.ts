@@ -1,7 +1,7 @@
 import apiClient from './api';
 
 // Toggle between mock and real API
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface TimeInRangeData {
   percentage: number;

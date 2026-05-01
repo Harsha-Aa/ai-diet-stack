@@ -1,7 +1,7 @@
 import apiClient from './api';
 import { mockFoodAnalysis } from './mockData';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface FoodAnalysisRequest {
   text: string;

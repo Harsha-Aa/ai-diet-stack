@@ -1,7 +1,7 @@
 import apiClient from './api';
 import { mockGlucoseReadings } from './mockData';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 export interface GlucoseReading {
   id?: string;
