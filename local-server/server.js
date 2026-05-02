@@ -157,8 +157,6 @@ app.post('/auth/login', async (req, res) => {
         tokenType: 'Bearer',
       },
     });
-      },
-    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
