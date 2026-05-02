@@ -33,6 +33,11 @@ The AI Diet & Meal Recommendation System is a comprehensive diabetes management 
 - **Bedrock_Model**: Amazon Bedrock AI model (Claude) for predictions and recommendations
 - **Rekognition_Service**: Amazon AI service for image recognition
 - **Transcribe_Service**: Amazon AI service for speech-to-text conversion
+- **AWS_Textract**: Amazon AI service for extracting text and data from PDF documents
+- **Bulk_Upload_File**: A PDF, Excel, or CSV file containing multiple glucose readings for import
+- **File_Parser**: Component that extracts glucose readings from uploaded files
+- **Glucose_Extract**: A glucose reading and timestamp extracted from a Bulk_Upload_File
+- **Duplicate_Reading**: A glucose reading with the same user_id and timestamp as an existing entry
 
 ## Requirements
 
@@ -61,6 +66,31 @@ The AI Diet & Meal Recommendation System is a comprehensive diabetes management 
 4. WHEN a CGM_Device syncs data, THE System SHALL automatically import Blood_Glucose_Reading entries
 5. THE System SHALL store all Blood_Glucose_Reading entries in DynamoDB_Table with user_id and timestamp as composite key
 6. THE System SHALL allow users to view their glucose history for any date range
+
+### Requirement 2B: Bulk Glucose Upload from Files
+
+**User Story:** As a user, I want to upload glucose readings in bulk from PDF, Excel, or CSV files exported from my glucose meter or CGM device, so that I can import historical data without manual entry.
+
+#### Acceptance Criteria
+
+1. THE System SHALL allow users to upload files in PDF, Excel (.xlsx, .xls), or CSV formats containing glucose readings
+2. WHEN a file is uploaded, THE System SHALL store it temporarily in S3_Bucket with user_id prefix and 30-day TTL
+3. THE System SHALL parse PDF files using AWS_Textract to extract glucose readings and timestamps
+4. THE System SHALL parse Excel files using a spreadsheet parsing library to extract glucose readings and timestamps
+5. THE System SHALL parse CSV files using a CSV parsing library to extract glucose readings and timestamps
+6. WHEN parsing files, THE System SHALL use Bedrock_Model to intelligently extract glucose values and timestamps from unstructured data
+7. THE System SHALL validate all extracted Blood_Glucose_Reading values are between 20 and 600 mg/dL
+8. THE System SHALL validate all extracted timestamps are valid ISO 8601 dates
+9. THE System SHALL display a preview of extracted readings with count and date range before importing
+10. THE System SHALL allow users to review and edit individual extracted readings before final import
+11. WHEN duplicate readings exist (same user_id and timestamp), THE System SHALL skip the duplicate and log it in the preview
+12. IF a file contains invalid format or no glucose data, THEN THE System SHALL return a descriptive error message indicating the issue
+13. THE System SHALL batch insert validated readings into DynamoDB_Table using batch write operations
+14. THE System SHALL support common CGM export formats including Dexcom Clarity reports, Freestyle Libre reports, and generic glucose meter exports
+15. WHERE Free_User tier, THE System SHALL enforce a limit of 5 file uploads per month
+16. WHERE Premium_User tier, THE System SHALL allow unlimited file uploads per month
+17. THE System SHALL display upload progress indicator during file processing
+18. WHEN file processing completes, THE System SHALL display summary showing total readings extracted, imported, skipped, and any errors
 
 ### Requirement 3: Dashboard and Analytics
 
@@ -268,6 +298,7 @@ The AI Diet & Meal Recommendation System is a comprehensive diabetes management 
 | Text-Based Nutrient Analysis | 25/month | Unlimited |
 | Insulin Dose Recommendations | 20/month | Unlimited |
 | Pattern Insights | 1/month | Weekly |
+| Bulk Glucose File Uploads | 5/month | Unlimited |
 
 ## Non-Functional Requirements
 

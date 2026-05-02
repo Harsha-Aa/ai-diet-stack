@@ -13,6 +13,7 @@ export class StorageStack extends cdk.Stack {
   public readonly encryptionKey: kms.Key;
   public readonly foodImagesBucket: s3.Bucket;
   public readonly reportsBucket: s3.Bucket;
+  public readonly glucoseUploadsBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: StorageStackProps) {
     super(scope, id, props);
@@ -108,6 +109,59 @@ export class StorageStack extends cdk.Stack {
       autoDeleteObjects: envConfig.removalPolicy === 'DESTROY',
     });
 
+    // S3 Bucket for glucose file uploads (Task 7B.2 - Requirement 2B)
+    this.glucoseUploadsBucket = new s3.Bucket(this, 'GlucoseUploadsBucket', {
+      bucketName: getResourceName(envConfig, 'ai-diet-glucose-uploads'),
+      encryption: s3.BucketEncryption.KMS,
+      encryptionKey: this.encryptionKey,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      versioned: false, // No versioning needed for temporary uploads
+      lifecycleRules: [
+        {
+          id: 'DeleteOldUploads',
+          enabled: true,
+          expiration: cdk.Duration.days(30), // 30-day TTL for uploaded files
+        },
+        {
+          id: 'DeleteParsedData',
+          enabled: true,
+          prefix: '*/*/parsed-data.json', // Matches {user_id}/{parse_id}/parsed-data.json
+          expiration: cdk.Duration.days(1), // 24-hour TTL for parsed data (Task 7B.11)
+        },
+      ],
+      // CORS configuration for file uploads
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.POST,
+          ],
+          allowedOrigins: ['*'], // In production, restrict to specific web app domains
+          allowedHeaders: [
+            'Content-Type',
+            'Content-Length',
+            'Content-MD5',
+            'Authorization',
+            'X-Amz-Date',
+            'X-Amz-Security-Token',
+            'X-Amz-User-Agent',
+            'X-Amz-Content-Sha256',
+          ],
+          exposedHeaders: [
+            'ETag',
+            'X-Amz-Server-Side-Encryption',
+            'X-Amz-Request-Id',
+            'X-Amz-Id-2',
+          ],
+          maxAge: 3000, // 50 minutes (longer than pre-signed URL expiration)
+        },
+      ],
+      removalPolicy: envConfig.removalPolicy === 'DESTROY' 
+        ? cdk.RemovalPolicy.DESTROY 
+        : cdk.RemovalPolicy.RETAIN,
+      autoDeleteObjects: envConfig.removalPolicy === 'DESTROY',
+    });
+
     // Stack Outputs
     new cdk.CfnOutput(this, 'EncryptionKeyId', {
       value: this.encryptionKey.keyId,
@@ -143,6 +197,18 @@ export class StorageStack extends cdk.Stack {
       value: this.reportsBucket.bucketArn,
       description: 'S3 bucket ARN for reports',
       exportName: `${envConfig.resourcePrefix}-AiDietReportsBucketArn`,
+    });
+
+    new cdk.CfnOutput(this, 'GlucoseUploadsBucketName', {
+      value: this.glucoseUploadsBucket.bucketName,
+      description: 'S3 bucket for glucose file uploads',
+      exportName: `${envConfig.resourcePrefix}-AiDietGlucoseUploadsBucket`,
+    });
+
+    new cdk.CfnOutput(this, 'GlucoseUploadsBucketArn', {
+      value: this.glucoseUploadsBucket.bucketArn,
+      description: 'S3 bucket ARN for glucose file uploads',
+      exportName: `${envConfig.resourcePrefix}-AiDietGlucoseUploadsBucketArn`,
     });
   }
 }

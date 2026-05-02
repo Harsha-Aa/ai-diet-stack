@@ -109,6 +109,7 @@ export interface UsageTracking {
   mealRecommendationCount: number;
   patternInsightCount: number;
   insulinDoseCount: number;
+  bulkUploadCount: number;
   lastUpdated: string;
 }
 

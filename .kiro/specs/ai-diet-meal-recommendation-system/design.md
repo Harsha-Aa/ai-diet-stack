@@ -299,6 +299,25 @@ lambda/
 │   │   ├── dexcomAdapter.ts
 │   │   ├── libreAdapter.ts
 │   │   └── tests/
+│   ├── bulkUpload/
+│   │   ├── uploadFile.ts
+│   │   ├── parseFile.ts
+│   │   ├── getParseStatus.ts
+│   │   ├── importReadings.ts
+│   │   ├── parsers/
+│   │   │   ├── pdfParser.ts
+│   │   │   ├── excelParser.ts
+│   │   │   ├── csvParser.ts
+│   │   │   └── bedrockExtractor.ts
+│   │   ├── validators/
+│   │   │   ├── fileValidator.ts
+│   │   │   ├── readingValidator.ts
+│   │   │   └── duplicateDetector.ts
+│   │   └── tests/
+│   │       ├── pdfParser.test.ts
+│   │       ├── excelParser.test.ts
+│   │       ├── csvParser.test.ts
+│   │       └── bulkUpload.integration.test.ts
 │   └── shared/
 │       └── glucoseValidator.ts
 ├── food/
@@ -950,6 +969,140 @@ Response: 200 OK
 {
   synced_count: number;
   latest_reading: GlucoseReading;
+}
+```
+
+**POST /glucose/upload-file**
+```typescript
+Headers: Authorization: Bearer {token}
+
+Request:
+{
+  file_name: string;
+  file_type: 'pdf' | 'excel' | 'csv';
+  file_size: number;  // bytes
+}
+
+Response: 200 OK
+{
+  upload_id: string;
+  upload_url: string;  // Pre-signed S3 URL for direct upload
+  expires_at: string;  // ISO 8601, typically 15 minutes
+}
+
+Error: 429 Too Many Requests (if usage limit exceeded)
+{
+  error: 'Usage limit exceeded';
+  feature: 'bulk_glucose_upload';
+  limit: 5;
+  used: 5;
+  reset_date: string;
+  upgrade_url: string;
+}
+```
+
+**POST /glucose/parse-file**
+```typescript
+Headers: Authorization: Bearer {token}
+
+Request:
+{
+  upload_id: string;
+  s3_key: string;
+  file_type: 'pdf' | 'excel' | 'csv';
+}
+
+Response: 202 Accepted (for large files > 1MB)
+{
+  job_id: string;
+  status: 'processing';
+  estimated_completion: string;  // ISO 8601
+}
+
+Response: 200 OK (for small files < 1MB, synchronous processing)
+{
+  job_id: string;
+  status: 'completed';
+  preview: {
+    total_readings: number;
+    date_range: {
+      earliest: string;  // ISO 8601
+      latest: string;    // ISO 8601
+    };
+    sample_readings: GlucoseExtract[];  // First 10 readings
+    validation_summary: {
+      valid_count: number;
+      invalid_count: number;
+      duplicate_count: number;
+    };
+  };
+}
+
+Error: 400 Bad Request (invalid file format)
+{
+  error: 'Invalid file format';
+  details: 'No glucose data found in file';
+  supported_formats: ['Dexcom Clarity', 'Freestyle Libre', 'Generic CSV'];
+}
+```
+
+**GET /glucose/parse-status/{job_id}**
+```typescript
+Headers: Authorization: Bearer {token}
+
+Response: 200 OK
+{
+  job_id: string;
+  status: 'processing' | 'completed' | 'failed';
+  progress_percentage?: number;  // For processing status
+  preview?: {
+    total_readings: number;
+    date_range: {
+      earliest: string;
+      latest: string;
+    };
+    sample_readings: GlucoseExtract[];
+    validation_summary: {
+      valid_count: number;
+      invalid_count: number;
+      duplicate_count: number;
+    };
+  };
+  error?: {
+    code: string;
+    message: string;
+    details: any;
+  };
+}
+```
+
+**POST /glucose/import-readings**
+```typescript
+Headers: Authorization: Bearer {token}
+
+Request:
+{
+  job_id: string;
+  readings: GlucoseExtract[];  // User-reviewed and edited readings
+  skip_duplicates: boolean;     // Default: true
+}
+
+Response: 200 OK
+{
+  import_summary: {
+    total_submitted: number;
+    imported_count: number;
+    skipped_count: number;
+    failed_count: number;
+  };
+  skipped_readings: Array<{
+    reading: GlucoseExtract;
+    reason: 'duplicate' | 'invalid';
+  }>;
+  failed_readings: Array<{
+    reading: GlucoseExtract;
+    error: string;
+  }>;
 }
 ```
 

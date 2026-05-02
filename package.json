@@ -51,6 +51,7 @@
     "@aws-sdk/client-ses": "^3.525.0",
     "@aws-sdk/client-sns": "^3.525.0",
     "@aws-sdk/client-ssm": "^3.525.0",
+    "@aws-sdk/client-textract": "^3.1040.0",
     "@aws-sdk/client-transcribe": "^3.525.0",
     "@aws-sdk/lib-dynamodb": "^3.525.0",
     "@aws-sdk/s3-request-presigner": "^3.525.0",
@@ -58,9 +59,11 @@
     "aws-jwt-verify": "^5.1.1",
     "aws-sdk-client-mock": "^3.0.1",
     "constructs": "^10.3.0",
+    "csv-parser": "^3.2.0",
     "date-fns": "^3.3.1",
     "fast-check": "^3.15.1",
     "ulid": "^2.3.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   }
 }

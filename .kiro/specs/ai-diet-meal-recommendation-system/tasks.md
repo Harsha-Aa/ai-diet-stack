@@ -79,6 +79,32 @@ Implement manual glucose reading entry and retrieval.
 - [x] 7.7 Write unit tests for glucose validation
 - [x] 7.8 Write integration tests for glucose CRUD operations
 
+### Task 7B: Bulk Glucose Upload from Files (Requirement 2B)
+Implement bulk glucose reading import from PDF, Excel, and CSV files.
+
+- [x] 7B.1 Create POST /glucose/upload-file Lambda function
+- [x] 7B.2 Create S3 bucket for glucose file uploads
+- [x] 7B.3 Create POST /glucose/parse-file Lambda function
+- [x] 7B.4 Implement PDF parser with AWS Textract
+- [x] 7B.5 Implement Bedrock-based glucose extraction from PDF text
+- [x] 7B.6 Implement Excel parser (xlsx library)
+- [x] 7B.7 Implement CSV parser (csv-parser library)
+- [x] 7B.8 Implement glucose reading validation
+- [x] 7B.9 Implement duplicate detection
+- [x] 7B.10 Create POST /glucose/import-readings Lambda function
+- [x] 7B.11 Store parsed data in S3 for preview
+- [x] 7B.12 Implement usage tracking for bulk uploads
+- [ ] 7B.13 Add IAM permissions for Textract and Bedrock
+- [ ] 7B.14 Update CDK stacks for bulk upload infrastructure
+- [ ] 7B.15 Write unit tests for file parsers
+- [ ] 7B.16 Write unit tests for validation logic
+- [ ] 7B.17 Write integration tests for upload flow
+- [ ] 7B.18 Write property-based tests for validation
+- [ ] 7B.19 Add CloudWatch metrics and alarms
+- [ ] 7B.20 Document bulk upload API endpoints
+
+
+
 ### Task 8: Dashboard Analytics - Basic Metrics (Requirement 3)
 Implement core dashboard calculations (eA1C, TIR).
 
@@ -187,7 +213,7 @@ Implement AI-powered glucose prediction using Bedrock.
 - [x] 16.5 Calculate confidence intervals
 - [x] 16.6 Store predictions in DynamoDB for accuracy tracking
 - [x] 16.7 Apply usage limits for free users (20/month)
-- [ ] 16.8 Write unit tests for prediction logic
+- [x] 16.8 Write unit tests for prediction logic
 
 ### Task 17: Meal Recommendations (Requirement 6)
 Implement personalized meal recommendations based on glucose and preferences.

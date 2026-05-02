@@ -181,6 +181,24 @@ export async function getAllUsage(userId: string): Promise<Record<string, number
 }
 
 /**
+ * Get remaining usage for a feature
+ * 
+ * @param userId - User ID
+ * @param featureName - Name of the feature
+ * @param limit - Maximum allowed usage
+ * @returns Remaining usage count (limit - used)
+ */
+export async function getRemainingUsage(
+  userId: string,
+  featureName: string,
+  limit: number
+): Promise<number> {
+  const usage = await getUsage(userId);
+  const used = usage[featureName] || 0;
+  return Math.max(0, limit - used);
+}
+
+/**
  * Reset usage for a specific feature (admin function)
  * 
  * WARNING: This should only be used for testing or admin operations
