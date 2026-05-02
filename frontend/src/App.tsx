@@ -11,6 +11,8 @@ import Dashboard from './components/dashboard/Dashboard';
 import GlucoseLog from './components/glucose/GlucoseLog';
 import FoodAnalyzer from './components/food/FoodAnalyzer';
 import ProfilePage from './components/profile/ProfilePage';
+import MealRecommendations from './components/ai/MealRecommendations';
+import PatternAnalysis from './components/ai/PatternAnalysis';
 import Layout from './components/layout/Layout';
 
 // Create Material-UI theme
@@ -59,6 +61,8 @@ function AppRoutes() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="glucose" element={<GlucoseLog />} />
         <Route path="food" element={<FoodAnalyzer />} />
+        <Route path="meals" element={<MealRecommendations />} />
+        <Route path="patterns" element={<PatternAnalysis />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
     </Routes>

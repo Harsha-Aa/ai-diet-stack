@@ -26,6 +26,7 @@ export interface ComputeStackProps extends cdk.StackProps {
   predictionsTable: dynamodb.ITable;
   foodImagesBucket: s3.IBucket;
   reportsBucket: s3.IBucket;
+  glucoseUploadsBucket: s3.IBucket;
   api: apigateway.IRestApi;
   authorizer: apigateway.IAuthorizer;
   // Secrets and parameters
@@ -87,6 +88,8 @@ export class ComputeStack extends cdk.Stack {
           `${props.foodImagesBucket.bucketArn}/*`,
           props.reportsBucket.bucketArn,
           `${props.reportsBucket.bucketArn}/*`,
+          props.glucoseUploadsBucket.bucketArn,
+          `${props.glucoseUploadsBucket.bucketArn}/*`,
         ],
       })
     );
@@ -96,6 +99,20 @@ export class ComputeStack extends cdk.Stack {
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+        resources: ['*'],
+      })
+    );
+
+    // Grant Textract permissions for bulk glucose upload (Task 7B)
+    this.lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'textract:DetectDocumentText',
+          'textract:AnalyzeDocument',
+          'textract:StartDocumentTextDetection',
+          'textract:GetDocumentTextDetection',
+        ],
         resources: ['*'],
       })
     );

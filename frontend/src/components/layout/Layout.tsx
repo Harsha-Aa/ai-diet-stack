@@ -24,6 +24,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BloodtypeIcon from '@mui/icons-material/Bloodtype';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PersonIcon from '@mui/icons-material/Person';
 import { useAuth } from '../../context/AuthContext';
 
@@ -33,6 +35,8 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'Glucose Log', icon: <BloodtypeIcon />, path: '/glucose' },
   { text: 'Food Analyzer', icon: <RestaurantIcon />, path: '/food' },
+  { text: 'Meal Recommendations', icon: <RestaurantMenuIcon />, path: '/meals' },
+  { text: 'Pattern Analysis', icon: <TrendingUpIcon />, path: '/patterns' },
   { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
 ];
 

@@ -1,25 +1,50 @@
 # Design Document: AI Diet & Meal Recommendation System
 
+## Architecture Migration: Lambda → Express.js
+
+**Key Changes**:
+- **Compute**: AWS Lambda functions → Express.js REST API server
+- **Deployment**: API Gateway + Lambda → Docker containers on EC2/Render/Railway
+- **Code Organization**: Individual Lambda handlers → Express routes/controllers/services
+- **Scaling**: Lambda auto-scaling → Horizontal scaling with load balancer + PM2 clustering
+- **Monitoring**: CloudWatch + X-Ray → CloudWatch + Application metrics (Prometheus/Grafana optional)
+
+**What Stays the Same**:
+- AWS Services: DynamoDB, S3, Cognito, Bedrock, Rekognition, Transcribe
+- Security: HIPAA compliance, encryption, authentication, audit logging
+- Freemium Model: Usage tracking and limits
+- Property-Based Testing: Food parser and calculation functions
+- Mobile App: React Native frontend (unchanged)
+
+**Benefits of Express.js Architecture**:
+- **Easier Debugging**: Traditional server logs, breakpoints, and stack traces
+- **Predictable Performance**: No cold starts, consistent response times
+- **Simpler Development**: Local development matches production environment
+- **Cost Effective**: ~13% cost reduction vs Lambda ($406/month vs $467/month)
+- **Familiar Patterns**: Standard Express.js patterns and middleware
+- **Better Control**: Full control over request lifecycle and resource management
+
 ## Overview
 
-The AI Diet & Meal Recommendation System is a production-ready, HIPAA-compliant diabetes management platform built on AWS serverless architecture. The system provides intelligent glucose monitoring, AI-powered food recognition, predictive analytics, and personalized meal recommendations for pre-diabetes, Type 1, and Type 2 diabetes patients.
+The AI Diet & Meal Recommendation System is a production-ready, HIPAA-compliant diabetes management platform built on Express.js server architecture with AWS managed services. The system provides intelligent glucose monitoring, AI-powered food recognition, predictive analytics, and personalized meal recommendations for pre-diabetes, Type 1, and Type 2 diabetes patients.
 
 ### Design Philosophy
 
 **"Build frontend neatly, build backend correctly and slow"** - This design emphasizes:
 - **Frontend**: Clean, intuitive mobile-first React Native UI with excellent UX
-- **Backend**: Robust, secure, scalable AWS serverless architecture with proper error handling, monitoring, and cost optimization
+- **Backend**: Robust, secure, scalable Express.js REST API with proper error handling, monitoring, and maintainability
 - **Quality over Speed**: Production-ready patterns, comprehensive testing, and maintainable code
 
 ### Key Design Principles
 
-1. **Serverless-First**: Leverage AWS managed services to minimize operational overhead
+1. **Traditional Server Architecture**: Express.js server for predictable performance and easier debugging
 2. **Security by Default**: HIPAA compliance, encryption at rest/transit, least-privilege access
-3. **Cost-Optimized**: Freemium model with usage tracking, on-demand scaling, lifecycle policies
+3. **Cost-Optimized**: Freemium model with usage tracking, horizontal scaling with load balancer
 4. **AI-Powered**: Amazon Bedrock (Claude) for predictions, Rekognition for images, Transcribe for voice
 5. **Mobile-First**: React Native for iOS/Android with offline-first capabilities
-6. **Observable**: Comprehensive logging, monitoring, and alerting with CloudWatch
+6. **Observable**: Comprehensive logging, monitoring, and alerting with CloudWatch and application metrics
 7. **Testable**: Property-based testing for parsers, unit tests for business logic, integration tests for AWS services
+8. **Containerized**: Docker for consistent deployment across environments (EC2, Render, Railway)
 
 ## Architecture
 
@@ -33,22 +58,35 @@ graph TB
         Web[React Web App - Optional]
     end
     
-    subgraph "API Layer"
-        APIGW[API Gateway REST API]
-        AppSync[AWS AppSync GraphQL - Real-time]
+    subgraph "Load Balancer"
+        ALB[Application Load Balancer / Nginx]
+    end
+    
+    subgraph "Compute Layer - Express.js Server"
+        Server1[Express Server Instance 1]
+        Server2[Express Server Instance 2]
+        Server3[Express Server Instance N]
     end
     
     subgraph "Authentication"
         Cognito[Amazon Cognito User Pool]
     end
     
-    subgraph "Compute Layer"
-        AuthLambda[Auth Lambda Functions]
-        GlucoseLambda[Glucose Lambda Functions]
-        FoodLambda[Food Lambda Functions]
-        AILambda[AI Lambda Functions]
-        AnalyticsLambda[Analytics Lambda Functions]
-        NotificationLambda[Notification Lambda Functions]
+    subgraph "Express Routes & Controllers"
+        AuthRoutes[Auth Routes]
+        GlucoseRoutes[Glucose Routes]
+        FoodRoutes[Food Routes]
+        AIRoutes[AI Routes]
+        AnalyticsRoutes[Analytics Routes]
+    end
+    
+    subgraph "Service Layer"
+        AuthService[Auth Service]
+        GlucoseService[Glucose Service]
+        FoodService[Food Service]
+        AIService[AI Service]
+        AnalyticsService[Analytics Service]
+        NotificationService[Notification Service]
     end
     
     subgraph "AI Services"
@@ -63,7 +101,6 @@ graph TB
     end
     
     subgraph "Integration Layer"
-        StepFunctions[Step Functions - Orchestration]
         EventBridge[EventBridge - Events]
         SNS[SNS - Notifications]
         SES[SES - Email]
@@ -71,46 +108,50 @@ graph TB
     
     subgraph "Monitoring"
         CloudWatch[CloudWatch Logs & Metrics]
-        CloudTrail[CloudTrail - Audit]
-        XRay[X-Ray - Tracing]
+        AppMetrics[Application Metrics - Prometheus/Grafana]
+        HealthCheck[Health Check Endpoint]
     end
     
-    Mobile --> APIGW
-    Mobile --> AppSync
-    APIGW --> Cognito
-    AppSync --> Cognito
+    Mobile --> ALB
+    Web --> ALB
+    ALB --> Server1
+    ALB --> Server2
+    ALB --> Server3
     
-    APIGW --> AuthLambda
-    APIGW --> GlucoseLambda
-    APIGW --> FoodLambda
-    APIGW --> AILambda
-    APIGW --> AnalyticsLambda
+    Server1 --> AuthRoutes
+    Server1 --> GlucoseRoutes
+    Server1 --> FoodRoutes
+    Server1 --> AIRoutes
+    Server1 --> AnalyticsRoutes
     
-    AILambda --> Bedrock
-    FoodLambda --> Rekognition
-    FoodLambda --> Transcribe
+    AuthRoutes --> AuthService
+    GlucoseRoutes --> GlucoseService
+    FoodRoutes --> FoodService
+    AIRoutes --> AIService
+    AnalyticsRoutes --> AnalyticsService
     
-    AuthLambda --> DynamoDB
-    GlucoseLambda --> DynamoDB
-    FoodLambda --> DynamoDB
-    FoodLambda --> S3
-    AILambda --> DynamoDB
-    AnalyticsLambda --> DynamoDB
+    AuthService --> Cognito
+    AuthService --> DynamoDB
     
-    GlucoseLambda --> EventBridge
-    EventBridge --> NotificationLambda
-    NotificationLambda --> SNS
-    NotificationLambda --> SES
+    GlucoseService --> DynamoDB
+    GlucoseService --> EventBridge
     
-    AILambda --> StepFunctions
-    StepFunctions --> Bedrock
+    FoodService --> S3
+    FoodService --> Rekognition
+    FoodService --> DynamoDB
     
-    AuthLambda --> CloudWatch
-    GlucoseLambda --> CloudWatch
-    FoodLambda --> CloudWatch
-    AILambda --> CloudWatch
-    AnalyticsLambda --> CloudWatch
-    NotificationLambda --> CloudWatch
+    AIService --> Bedrock
+    AIService --> DynamoDB
+    
+    AnalyticsService --> DynamoDB
+    
+    EventBridge --> NotificationService
+    NotificationService --> SNS
+    NotificationService --> SES
+    
+    Server1 --> CloudWatch
+    Server1 --> AppMetrics
+    Server1 --> HealthCheck
 ```
 
 ### Architecture Layers
@@ -121,27 +162,43 @@ graph TB
 - **Offline-First**: Local storage with sync when online
 - **State Management**: Redux Toolkit for predictable state management
 
-#### 2. API Layer
-- **API Gateway REST API**: Synchronous request/response for CRUD operations
-- **AWS AppSync GraphQL**: Real-time subscriptions for glucose updates and notifications
-- **Rate Limiting**: 100 requests/minute per user (Requirement 13.6)
-- **Request Validation**: JSON Schema validation at API Gateway level
+#### 2. Load Balancer Layer
+- **Application Load Balancer (AWS)**: Distributes traffic across Express server instances
+- **Nginx (Alternative)**: Can be used for reverse proxy and SSL termination
+- **Health Checks**: Regular health check pings to /health endpoint
+- **SSL/TLS Termination**: HTTPS certificate management
+- **Rate Limiting**: 100 requests/minute per user at load balancer level
 
-#### 3. Authentication & Authorization
+#### 3. Compute Layer (Express.js Server)
+- **Express.js REST API**: Node.js/TypeScript server handling all HTTP requests
+- **Horizontal Scaling**: Multiple server instances behind load balancer
+- **Process Management**: PM2 for process clustering and auto-restart
+- **Graceful Shutdown**: Proper connection draining on shutdown
+- **Request Validation**: JSON Schema validation at route level
+- **Middleware Stack**: Authentication, logging, error handling, rate limiting
+
+#### 4. Authentication & Authorization
 - **Amazon Cognito User Pool**: User registration, login, MFA support
 - **JWT Tokens**: Stateless authentication with 60-minute expiry (Requirement 13.5)
-- **Custom Authorizers**: Lambda authorizers for fine-grained access control
+- **Middleware Verification**: JWT verification middleware for protected routes
 - **Role-Based Access**: User, Premium User, Healthcare Provider roles
 
-#### 4. Compute Layer (Lambda Functions)
-- **Auth Functions**: Registration, login, profile management
-- **Glucose Functions**: CRUD for glucose readings, CGM sync
-- **Food Functions**: Image upload, food recognition, nutrient analysis
-- **AI Functions**: Predictions, recommendations, pattern insights
-- **Analytics Functions**: Dashboard metrics, report generation
-- **Notification Functions**: Alerts, reminders, weekly summaries
+#### 5. Express Routes & Controllers
+- **Auth Routes**: Registration, login, profile management
+- **Glucose Routes**: CRUD for glucose readings, CGM sync, bulk upload
+- **Food Routes**: Image upload, food recognition, nutrient analysis
+- **AI Routes**: Predictions, recommendations, pattern insights
+- **Analytics Routes**: Dashboard metrics, report generation
 
-#### 5. AI Services Integration
+#### 6. Service Layer
+- **Auth Service**: Cognito integration, user management
+- **Glucose Service**: Glucose data management, validation, alerts
+- **Food Service**: Food logging, image processing, nutrient analysis
+- **AI Service**: Bedrock integration, predictions, recommendations
+- **Analytics Service**: Metrics calculation, report generation
+- **Notification Service**: Alert triggering, email/SMS sending
+
+#### 7. AI Services Integration
 - **Amazon Bedrock (Claude 3)**: 
   - Glucose predictions
   - Meal recommendations
@@ -151,23 +208,22 @@ graph TB
 - **Amazon Rekognition**: Food image recognition
 - **Amazon Transcribe**: Voice-to-text for data entry
 
-#### 6. Data Layer
+#### 8. Data Layer
 - **DynamoDB Tables**: User profiles, glucose readings, food logs, usage tracking
 - **S3 Buckets**: Food images, generated reports, backups
 - **Encryption**: KMS encryption at rest, TLS 1.2+ in transit (Requirement 13.1, 13.2)
 
-#### 7. Integration & Orchestration
-- **Step Functions**: Multi-step AI workflows (e.g., image → recognition → nutrient analysis)
+#### 9. Integration & Orchestration
 - **EventBridge**: Event-driven architecture for glucose alerts, pattern analysis triggers
 - **SNS**: Push notifications, SMS alerts
 - **SES**: Email notifications, weekly reports
 
-#### 8. Monitoring & Observability
-- **CloudWatch Logs**: Centralized logging for all Lambda functions
+#### 10. Monitoring & Observability
+- **CloudWatch Logs**: Centralized logging for all server instances
 - **CloudWatch Metrics**: Custom metrics for usage tracking, AI request counts
+- **Application Metrics**: Prometheus/Grafana for server-specific metrics (optional)
+- **Health Check Endpoint**: /health for load balancer health checks
 - **CloudWatch Alarms**: Alerts for errors, latency, cost thresholds
-- **CloudTrail**: Audit logging for HIPAA compliance (Requirement 13.3)
-- **X-Ray**: Distributed tracing for performance optimization
 
 ## Components and Interfaces
 
@@ -267,275 +323,634 @@ src/
 - High contrast mode for better visibility
 - Keyboard navigation support
 
-### Backend Components (AWS Lambda)
+### Backend Components (Express.js Server)
 
-#### Lambda Function Organization
+#### Express Server Organization
 
 
 ```
-lambda/
-├── auth/
-│   ├── register/
-│   │   ├── handler.ts
-│   │   ├── validator.ts
-│   │   └── tests/
-│   ├── login/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   └── profile/
-│       ├── getProfile.ts
-│       ├── updateProfile.ts
-│       └── tests/
-├── glucose/
-│   ├── createReading/
-│   │   ├── handler.ts
-│   │   ├── validator.ts
-│   │   └── tests/
-│   ├── getReadings/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   ├── cgmSync/
-│   │   ├── handler.ts
-│   │   ├── dexcomAdapter.ts
-│   │   ├── libreAdapter.ts
-│   │   └── tests/
-│   ├── bulkUpload/
-│   │   ├── uploadFile.ts
-│   │   ├── parseFile.ts
-│   │   ├── getParseStatus.ts
-│   │   ├── importReadings.ts
-│   │   ├── parsers/
-│   │   │   ├── pdfParser.ts
-│   │   │   ├── excelParser.ts
-│   │   │   ├── csvParser.ts
-│   │   │   └── bedrockExtractor.ts
-│   │   ├── validators/
-│   │   │   ├── fileValidator.ts
-│   │   │   ├── readingValidator.ts
-│   │   │   └── duplicateDetector.ts
-│   │   └── tests/
-│   │       ├── pdfParser.test.ts
-│   │       ├── excelParser.test.ts
-│   │       ├── csvParser.test.ts
-│   │       └── bulkUpload.integration.test.ts
-│   └── shared/
-│       └── glucoseValidator.ts
-├── food/
-│   ├── uploadImage/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   ├── recognizeFood/
-│   │   ├── handler.ts
-│   │   ├── rekognitionService.ts
-│   │   └── tests/
-│   ├── analyzeNutrients/
-│   │   ├── handler.ts
-│   │   ├── bedrockService.ts
-│   │   └── tests/
-│   ├── voiceEntry/
-│   │   ├── handler.ts
-│   │   ├── transcribeService.ts
-│   │   └── tests/
-│   └── parser/
-│       ├── foodParser.ts
-│       ├── foodPrettyPrinter.ts
-│       └── tests/
-│           └── foodParser.property.test.ts
-├── ai/
-│   ├── predictGlucose/
-│   │   ├── handler.ts
-│   │   ├── predictionEngine.ts
-│   │   └── tests/
-│   ├── recommendMeal/
-│   │   ├── handler.ts
-│   │   ├── recommendationEngine.ts
-│   │   └── tests/
-│   ├── analyzePatterns/
-│   │   ├── handler.ts
-│   │   ├── patternDetector.ts
-│   │   └── tests/
-│   └── calculateInsulin/
-│       ├── handler.ts
-│       ├── insulinCalculator.ts
-│       └── tests/
-├── analytics/
-│   ├── calculateMetrics/
-│   │   ├── handler.ts
-│   │   ├── eA1CCalculator.ts
-│   │   ├── tirCalculator.ts
-│   │   ├── agpGenerator.ts
-│   │   └── tests/
-│   └── generateReport/
-│       ├── handler.ts
-│       ├── pdfGenerator.ts
-│       └── tests/
-├── notifications/
-│   ├── sendAlert/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   ├── sendReminder/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   └── sendWeeklySummary/
-│       ├── handler.ts
-│       └── tests/
-├── provider/
-│   ├── inviteProvider/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   └── manageAccess/
-│       ├── handler.ts
-│       └── tests/
-├── subscription/
-│   ├── trackUsage/
-│   │   ├── handler.ts
-│   │   ├── usageTracker.ts
-│   │   └── tests/
-│   ├── checkLimit/
-│   │   ├── handler.ts
-│   │   └── tests/
-│   └── processPayment/
-│       ├── handler.ts
-│       └── tests/
-└── shared/
-    ├── middleware/
-    │   ├── authMiddleware.ts
-    │   ├── errorHandler.ts
-    │   ├── logger.ts
-    │   └── usageLimiter.ts
-    ├── utils/
-    │   ├── dynamoClient.ts
-    │   ├── s3Client.ts
-    │   ├── bedrockClient.ts
-    │   └── validation.ts
-    └── types/
-        ├── user.ts
-        ├── glucose.ts
-        ├── food.ts
-        └── api.ts
+server/
+├── src/
+│   ├── app.ts                      # Express app setup
+│   ├── server.ts                   # Server entry point
+│   ├── config/
+│   │   ├── index.ts                # Configuration loader
+│   │   ├── aws.ts                  # AWS SDK configuration
+│   │   ├── database.ts             # DynamoDB client setup
+│   │   └── logger.ts               # Winston logger configuration
+│   ├── middleware/
+│   │   ├── auth.ts                 # JWT verification middleware
+│   │   ├── errorHandler.ts        # Global error handler
+│   │   ├── requestLogger.ts       # Request logging middleware
+│   │   ├── rateLimiter.ts         # Rate limiting middleware
+│   │   ├── usageLimiter.ts        # Usage limit enforcement
+│   │   ├── validator.ts           # Request validation middleware
+│   │   └── cors.ts                # CORS configuration
+│   ├── routes/
+│   │   ├── index.ts                # Route aggregator
+│   │   ├── auth.routes.ts          # Auth endpoints
+│   │   ├── glucose.routes.ts       # Glucose endpoints
+│   │   ├── food.routes.ts          # Food endpoints
+│   │   ├── ai.routes.ts            # AI endpoints
+│   │   ├── analytics.routes.ts     # Analytics endpoints
+│   │   ├── subscription.routes.ts  # Subscription endpoints
+│   │   ├── provider.routes.ts      # Provider endpoints
+│   │   └── health.routes.ts        # Health check endpoint
+│   ├── controllers/
+│   │   ├── auth.controller.ts      # Auth request handlers
+│   │   ├── glucose.controller.ts   # Glucose request handlers
+│   │   ├── food.controller.ts      # Food request handlers
+│   │   ├── ai.controller.ts        # AI request handlers
+│   │   ├── analytics.controller.ts # Analytics request handlers
+│   │   ├── subscription.controller.ts
+│   │   └── provider.controller.ts
+│   ├── services/
+│   │   ├── auth.service.ts         # Cognito integration
+│   │   ├── glucose.service.ts      # Glucose business logic
+│   │   ├── food.service.ts         # Food business logic
+│   │   ├── ai.service.ts           # AI service integration
+│   │   ├── analytics.service.ts    # Analytics calculations
+│   │   ├── notification.service.ts # SNS/SES integration
+│   │   ├── usage.service.ts        # Usage tracking
+│   │   └── storage.service.ts      # S3 integration
+│   ├── repositories/
+│   │   ├── user.repository.ts      # User data access
+│   │   ├── glucose.repository.ts   # Glucose data access
+│   │   ├── food.repository.ts      # Food data access
+│   │   ├── usage.repository.ts     # Usage data access
+│   │   └── audit.repository.ts     # Audit log data access
+│   ├── models/
+│   │   ├── user.model.ts           # User type definitions
+│   │   ├── glucose.model.ts        # Glucose type definitions
+│   │   ├── food.model.ts           # Food type definitions
+│   │   └── api.model.ts            # API request/response types
+│   ├── utils/
+│   │   ├── validation.ts           # Validation helpers
+│   │   ├── calculations.ts         # eA1C, TIR calculations
+│   │   ├── errors.ts               # Custom error classes
+│   │   ├── jwt.ts                  # JWT utilities
+│   │   └── logger.ts               # Logging utilities
+│   ├── parsers/
+│   │   ├── foodParser.ts           # Food description parser
+│   │   ├── foodPrettyPrinter.ts    # Food entry formatter
+│   │   ├── pdfParser.ts            # PDF glucose file parser
+│   │   ├── excelParser.ts          # Excel glucose file parser
+│   │   └── csvParser.ts            # CSV glucose file parser
+│   └── tests/
+│       ├── unit/                   # Unit tests
+│       ├── integration/            # Integration tests
+│       ├── property/               # Property-based tests
+│       └── e2e/                    # End-to-end tests
+├── Dockerfile                      # Docker container definition
+├── docker-compose.yml              # Local development setup
+├── ecosystem.config.js             # PM2 configuration
+├── package.json
+├── tsconfig.json
+└── .env.example
 ```
 
-#### Lambda Function Patterns
+#### Express Server Patterns
 
-**1. Handler Structure**
+**1. Application Setup (app.ts)**
 ```typescript
-// Standard Lambda handler pattern
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  try {
-    // 1. Parse and validate input
-    const input = parseInput(event);
-    await validateInput(input);
-    
-    // 2. Check authentication and authorization
-    const user = await authenticateUser(event);
-    await authorizeAction(user, input);
-    
-    // 3. Check usage limits (for AI features)
-    if (isAIFeature) {
-      await checkUsageLimit(user, featureName);
-    }
-    
-    // 4. Execute business logic
-    const result = await executeBusinessLogic(input, user);
-    
-    // 5. Track usage (for AI features)
-    if (isAIFeature) {
-      await trackUsage(user, featureName);
-    }
-    
-    // 6. Return response
-    return successResponse(result);
-  } catch (error) {
-    // Centralized error handling
-    return errorResponse(error);
-  }
-};
+import express, { Application } from 'express';
+import helmet from 'helmet';
+import compression from 'compression';
+import { corsMiddleware } from './middleware/cors';
+import { requestLogger } from './middleware/requestLogger';
+import { errorHandler } from './middleware/errorHandler';
+import routes from './routes';
+
+export function createApp(): Application {
+  const app = express();
+  
+  // Security middleware
+  app.use(helmet());
+  
+  // CORS
+  app.use(corsMiddleware);
+  
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  
+  // Compression
+  app.use(compression());
+  
+  // Request logging
+  app.use(requestLogger);
+  
+  // Routes
+  app.use('/api', routes);
+  
+  // Health check (no /api prefix)
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  });
+  
+  // Error handling (must be last)
+  app.use(errorHandler);
+  
+  return app;
+}
 ```
 
-**2. Middleware Pattern**
+**2. Server Entry Point (server.ts)**
 ```typescript
-// Composable middleware for cross-cutting concerns
-const withAuth = (handler) => async (event) => {
-  const user = await authenticateUser(event);
-  return handler(event, user);
-};
+import { createApp } from './app';
+import { logger } from './config/logger';
+import { config } from './config';
 
-const withUsageLimit = (featureName) => (handler) => async (event, user) => {
-  await checkUsageLimit(user, featureName);
-  const result = await handler(event, user);
-  await trackUsage(user, featureName);
-  return result;
-};
+const app = createApp();
+const PORT = config.port || 3000;
 
-const withErrorHandling = (handler) => async (event, ...args) => {
-  try {
-    return await handler(event, ...args);
-  } catch (error) {
-    logger.error(error);
-    return errorResponse(error);
+let server: any;
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received, starting graceful shutdown`);
+  
+  if (server) {
+    server.close(async () => {
+      logger.info('HTTP server closed');
+      
+      // Close database connections, cleanup resources
+      await cleanup();
+      
+      logger.info('Graceful shutdown complete');
+      process.exit(0);
+    });
+    
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      logger.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 30000);
   }
 };
 
-// Compose middleware
-export const handler = withErrorHandling(
-  withAuth(
-    withUsageLimit('food_recognition')(
-      async (event, user) => {
-        // Business logic here
-      }
-    )
-  )
+// Start server
+server = app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Environment: ${config.env}`);
+  logger.info(`Health check: http://localhost:${PORT}/health`);
+});
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception', { error });
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled rejection', { reason, promise });
+  gracefulShutdown('unhandledRejection');
+});
+
+async function cleanup() {
+  // Close AWS SDK connections
+  // Close any other resources
+  logger.info('Cleanup complete');
+}
+```
+
+**3. Route Definition Pattern**
+```typescript
+// routes/glucose.routes.ts
+import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth';
+import { validateRequest } from '../middleware/validator';
+import { rateLimiter } from '../middleware/rateLimiter';
+import * as glucoseController from '../controllers/glucose.controller';
+import { createReadingSchema, getReadingsSchema } from '../validators/glucose.validator';
+
+const router = Router();
+
+// All glucose routes require authentication
+router.use(authMiddleware);
+
+// Create glucose reading
+router.post(
+  '/readings',
+  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  validateRequest(createReadingSchema),
+  glucoseController.createReading
 );
+
+// Get glucose readings
+router.get(
+  '/readings',
+  rateLimiter({ windowMs: 60000, max: 100 }),
+  validateRequest(getReadingsSchema, 'query'),
+  glucoseController.getReadings
+);
+
+// Bulk upload endpoints
+router.post(
+  '/upload-file',
+  rateLimiter({ windowMs: 60000, max: 10 }), // Stricter limit for uploads
+  glucoseController.uploadFile
+);
+
+router.post(
+  '/parse-file',
+  rateLimiter({ windowMs: 60000, max: 10 }),
+  glucoseController.parseFile
+);
+
+router.get(
+  '/parse-status/:jobId',
+  glucoseController.getParseStatus
+);
+
+router.post(
+  '/import-readings',
+  rateLimiter({ windowMs: 60000, max: 10 }),
+  glucoseController.importReadings
+);
+
+export default router;
 ```
 
-**3. Error Handling Strategy**
+**4. Controller Pattern**
 ```typescript
-// Custom error types
-class ValidationError extends Error {
-  statusCode = 400;
+// controllers/glucose.controller.ts
+import { Request, Response, NextFunction } from 'express';
+import * as glucoseService from '../services/glucose.service';
+import { AuthRequest } from '../middleware/auth';
+import { ValidationError, NotFoundError } from '../utils/errors';
+import { logger } from '../config/logger';
+
+export async function createReading(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { reading_value, reading_unit, timestamp, notes, meal_context } = req.body;
+    
+    logger.info('Creating glucose reading', { userId, reading_value });
+    
+    const reading = await glucoseService.createReading({
+      userId,
+      reading_value,
+      reading_unit,
+      timestamp,
+      notes,
+      meal_context
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: { reading }
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
-class UnauthorizedError extends Error {
-  statusCode = 401;
+export async function getReadings(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { start_date, end_date, limit } = req.query;
+    
+    const readings = await glucoseService.getReadings({
+      userId,
+      startDate: start_date as string,
+      endDate: end_date as string,
+      limit: limit ? parseInt(limit as string) : 100
+    });
+    
+    res.json({
+      success: true,
+      data: { readings, count: readings.length }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+```
+
+**5. Service Layer Pattern**
+```typescript
+// services/glucose.service.ts
+import * as glucoseRepository from '../repositories/glucose.repository';
+import * as notificationService from './notification.service';
+import { GlucoseReading, CreateReadingInput } from '../models/glucose.model';
+import { ValidationError } from '../utils/errors';
+import { logger } from '../config/logger';
+
+export async function createReading(input: CreateReadingInput): Promise<GlucoseReading> {
+  // Validate reading value
+  if (input.reading_value < 20 || input.reading_value > 600) {
+    throw new ValidationError('Glucose value must be between 20 and 600 mg/dL');
+  }
+  
+  // Create reading
+  const reading = await glucoseRepository.create({
+    user_id: input.userId,
+    timestamp: input.timestamp || new Date().toISOString(),
+    reading_value: input.reading_value,
+    reading_unit: input.reading_unit || 'mg/dL',
+    notes: input.notes,
+    meal_context: input.meal_context,
+    source: 'manual',
+    created_at: new Date().toISOString()
+  });
+  
+  // Check if alert should be triggered
+  await checkAndTriggerAlert(input.userId, reading);
+  
+  logger.info('Glucose reading created', { userId: input.userId, readingId: reading.timestamp });
+  
+  return reading;
 }
 
-class UsageLimitError extends Error {
-  statusCode = 429;
-  remainingDays: number;
+export async function getReadings(params: {
+  userId: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}): Promise<GlucoseReading[]> {
+  return glucoseRepository.findByUserAndDateRange(
+    params.userId,
+    params.startDate,
+    params.endDate,
+    params.limit
+  );
 }
 
-class AIServiceError extends Error {
-  statusCode = 503;
-  retryable = true;
+async function checkAndTriggerAlert(userId: string, reading: GlucoseReading): Promise<void> {
+  // Get user's target range
+  const user = await getUserProfile(userId);
+  
+  if (reading.reading_value > user.target_glucose_max) {
+    await notificationService.sendHighGlucoseAlert(userId, reading);
+  } else if (reading.reading_value < user.target_glucose_min) {
+    await notificationService.sendLowGlucoseAlert(userId, reading);
+  }
+}
+```
+
+**6. Repository Pattern**
+```typescript
+// repositories/glucose.repository.ts
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { dynamoClient } from '../config/database';
+import { GlucoseReading } from '../models/glucose.model';
+import { config } from '../config';
+
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
+
+export async function create(reading: GlucoseReading): Promise<GlucoseReading> {
+  await docClient.send(new PutCommand({
+    TableName: config.aws.tables.glucoseReadings,
+    Item: reading
+  }));
+  
+  return reading;
 }
 
-// Error handler
-function errorResponse(error: Error): APIGatewayProxyResult {
-  if (error instanceof ValidationError) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: error.message })
+export async function findByUserAndDateRange(
+  userId: string,
+  startDate?: string,
+  endDate?: string,
+  limit: number = 100
+): Promise<GlucoseReading[]> {
+  const params: any = {
+    TableName: config.aws.tables.glucoseReadings,
+    KeyConditionExpression: 'user_id = :userId',
+    ExpressionAttributeValues: {
+      ':userId': userId
+    },
+    Limit: limit,
+    ScanIndexForward: false // Most recent first
+  };
+  
+  if (startDate && endDate) {
+    params.KeyConditionExpression += ' AND #ts BETWEEN :startDate AND :endDate';
+    params.ExpressionAttributeNames = { '#ts': 'timestamp' };
+    params.ExpressionAttributeValues[':startDate'] = startDate;
+    params.ExpressionAttributeValues[':endDate'] = endDate;
+  }
+  
+  const result = await docClient.send(new QueryCommand(params));
+  return result.Items as GlucoseReading[];
+}
+```
+
+**7. Middleware Patterns**
+
+**Authentication Middleware**:
+```typescript
+// middleware/auth.ts
+import { Request, Response, NextFunction } from 'express';
+import { CognitoJwtVerifier } from 'aws-jwt-verify';
+import { UnauthorizedError } from '../utils/errors';
+import { config } from '../config';
+
+const verifier = CognitoJwtVerifier.create({
+  userPoolId: config.aws.cognito.userPoolId,
+  tokenUse: 'access',
+  clientId: config.aws.cognito.clientId
+});
+
+export interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    tier: 'free' | 'premium';
+  };
+}
+
+export async function authMiddleware(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedError('Missing or invalid authorization header');
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // Verify JWT with Cognito
+    const payload = await verifier.verify(token);
+    
+    // Attach user info to request
+    req.user = {
+      userId: payload.sub,
+      email: payload.email as string,
+      tier: payload['custom:tier'] as 'free' | 'premium' || 'free'
     };
+    
+    next();
+  } catch (error) {
+    next(new UnauthorizedError('Invalid or expired token'));
+  }
+}
+```
+
+**Usage Limit Middleware**:
+```typescript
+// middleware/usageLimiter.ts
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from './auth';
+import * as usageService from '../services/usage.service';
+import { UsageLimitError } from '../utils/errors';
+
+export function usageLimiter(feature: string, limit: number) {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const tier = req.user!.tier;
+      
+      // Premium users bypass limits
+      if (tier === 'premium') {
+        return next();
+      }
+      
+      // Check usage
+      const usage = await usageService.getCurrentUsage(userId, feature);
+      
+      if (usage >= limit) {
+        throw new UsageLimitError(feature, limit, usage);
+      }
+      
+      // Continue to handler
+      next();
+      
+      // Increment usage after successful request
+      res.on('finish', async () => {
+        if (res.statusCode < 400) {
+          await usageService.incrementUsage(userId, feature);
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+```
+
+**Error Handler Middleware**:
+```typescript
+// middleware/errorHandler.ts
+import { Request, Response, NextFunction } from 'express';
+import { logger } from '../config/logger';
+import {
+  ValidationError,
+  UnauthorizedError,
+  NotFoundError,
+  UsageLimitError,
+  AIServiceError
+} from '../utils/errors';
+
+export function errorHandler(
+  error: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  // Log error
+  logger.error('Request error', {
+    error: error.message,
+    stack: error.stack,
+    path: req.path,
+    method: req.method
+  });
+  
+  // Handle specific error types
+  if (error instanceof ValidationError) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: error.message,
+        details: error.details
+      }
+    });
+    return;
+  }
+  
+  if (error instanceof UnauthorizedError) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: error.message
+      }
+    });
+    return;
+  }
+  
+  if (error instanceof NotFoundError) {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: error.message
+      }
+    });
+    return;
   }
   
   if (error instanceof UsageLimitError) {
-    return {
-      statusCode: 429,
-      body: JSON.stringify({
-        error: 'Usage limit exceeded',
-        upgradeUrl: '/subscription/upgrade',
-        resetDate: calculateResetDate()
-      })
-    };
+    res.status(429).json({
+      success: false,
+      error: {
+        code: 'USAGE_LIMIT_EXCEEDED',
+        message: error.message,
+        details: {
+          feature: error.feature,
+          limit: error.limit,
+          used: error.used,
+          reset_date: error.resetDate,
+          upgrade_url: '/subscription/upgrade'
+        }
+      }
+    });
+    return;
   }
   
-  // Log unexpected errors
-  logger.error('Unexpected error', { error });
+  if (error instanceof AIServiceError) {
+    res.status(503).json({
+      success: false,
+      error: {
+        code: 'AI_SERVICE_ERROR',
+        message: 'AI service temporarily unavailable',
+        retry_after: 30
+      }
+    });
+    return;
+  }
   
-  return {
-    statusCode: 500,
-    body: JSON.stringify({ error: 'Internal server error' })
-  };
+  // Default error response
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred'
+    }
+  });
 }
 ```
 
@@ -2195,51 +2610,52 @@ const usagePlan = {
 #### Usage Tracking Middleware
 
 ```typescript
-const withUsageTracking = (featureName: string, limit: number) => {
-  return async (handler: Handler) => {
-    return async (event: APIGatewayProxyEvent, context: Context) => {
-      const userId = event.requestContext.authorizer.userId;
-      const tier = event.requestContext.authorizer.subscriptionTier;
+// middleware/usageLimiter.ts
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from './auth';
+import * as usageService from '../services/usage.service';
+import { UsageLimitError } from '../utils/errors';
+
+export function usageLimiter(feature: string, limit: number) {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const tier = req.user!.tier;
       
       // Premium users bypass limits
       if (tier === 'premium') {
-        return handler(event, context);
+        return next();
       }
       
       // Check current usage
       const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-      const usage = await getUsage(userId, currentMonth);
+      const usage = await usageService.getCurrentUsage(userId, currentMonth, feature);
       
-      if (usage[featureName] >= limit) {
-        return {
-          statusCode: 429,
-          body: JSON.stringify({
-            error: 'Usage limit exceeded',
-            feature: featureName,
-            limit,
-            used: usage[featureName],
-            reset_date: getNextMonthStart(),
-            upgrade_url: '/subscription/upgrade'
-          })
-        };
+      if (usage >= limit) {
+        throw new UsageLimitError(feature, limit, usage);
       }
       
-      // Execute handler
-      const result = await handler(event, context);
+      // Continue to handler
+      next();
       
-      // Increment usage counter
-      await incrementUsage(userId, currentMonth, featureName);
-      
-      return result;
-    };
+      // Increment usage after successful request
+      res.on('finish', async () => {
+        if (res.statusCode < 400) {
+          await usageService.incrementUsage(userId, currentMonth, feature);
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
   };
-};
+}
 
-// Usage
-export const handler = withUsageTracking('food_recognition', 25)(
-  async (event, context) => {
-    // Business logic
-  }
+// Usage in routes
+router.post(
+  '/food/recognize',
+  authMiddleware,
+  usageLimiter('food_recognition', 25),
+  foodController.recognizeFood
 );
 ```
 
@@ -2263,52 +2679,137 @@ const costAlarms = [
     evaluationPeriods: 1
   },
   {
-    name: 'LambdaCostAlarm',
+    name: 'EC2CostAlarm',
     metric: 'EstimatedCharges',
-    threshold: 300,
+    threshold: 100,
     period: 86400,
     evaluationPeriods: 1
   }
 ];
 ```
 
-### AWS Service Cost Optimization
+### Server Cost Optimization
 
-#### 1. Lambda Optimization
+#### 1. Instance Optimization
 
-**Memory Configuration**:
-- Auth functions: 256 MB (fast, infrequent)
-- CRUD functions: 512 MB (balanced)
-- AI functions: 1024 MB (CPU-intensive JSON parsing)
-- Analytics functions: 1024 MB (data processing)
+**Right-Sizing**:
+- Start with t3.medium (2 vCPU, 4GB RAM) for baseline
+- Monitor CPU and memory usage
+- Scale vertically if consistently > 70% utilization
+- Scale horizontally for traffic spikes
 
-**Provisioned Concurrency**: Only for critical endpoints (login, dashboard)
-
-**Code Optimization**:
-```typescript
-// Reuse connections across invocations
-let dynamoClient: DynamoDBClient;
-let bedrockClient: BedrockRuntimeClient;
-
-export const handler = async (event: APIGatewayProxyEvent) => {
-  // Initialize clients outside handler for reuse
-  if (!dynamoClient) {
-    dynamoClient = new DynamoDBClient({
-      region: process.env.AWS_REGION
-    });
-  }
-  
-  if (!bedrockClient) {
-    bedrockClient = new BedrockRuntimeClient({
-      region: process.env.AWS_REGION
-    });
-  }
-  
-  // Handler logic
+**PM2 Cluster Mode**:
+```javascript
+// ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'ai-diet-api',
+    script: './dist/server.js',
+    instances: 'max', // Use all CPU cores
+    exec_mode: 'cluster',
+    max_memory_restart: '900M', // Restart if memory exceeds 900MB
+    autorestart: true
+  }]
 };
 ```
 
-#### 2. DynamoDB Optimization
+#### 2. Connection Pooling
+
+**AWS SDK Client Reuse**:
+```typescript
+// config/aws.ts
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
+import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
+
+// Create clients once and reuse across requests
+export const dynamoClient = new DynamoDBClient({
+  region: process.env.AWS_REGION,
+  maxAttempts: 3,
+  requestHandler: {
+    connectionTimeout: 3000,
+    socketTimeout: 3000
+  }
+});
+
+export const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  maxAttempts: 3
+});
+
+export const bedrockClient = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION,
+  maxAttempts: 3
+});
+```
+
+#### 3. Caching Strategy
+
+**In-Memory Caching**:
+```typescript
+// services/cache.service.ts
+import NodeCache from 'node-cache';
+
+// Cache with 5-minute TTL
+const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+
+export async function getCachedOrFetch<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttl?: number
+): Promise<T> {
+  const cached = cache.get<T>(key);
+  
+  if (cached !== undefined) {
+    return cached;
+  }
+  
+  const data = await fetchFn();
+  cache.set(key, data, ttl);
+  
+  return data;
+}
+
+// Usage: Cache common food nutrients
+const nutrients = await getCachedOrFetch(
+  `nutrients:${foodDescription}`,
+  () => analyzeWithBedrock(foodDescription),
+  3600 // 1 hour TTL
+);
+```
+
+**Redis for Distributed Caching** (optional for multi-instance):
+```typescript
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  retryStrategy: (times) => Math.min(times * 50, 2000)
+});
+
+export async function getCachedOrFetch<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttl: number = 300
+): Promise<T> {
+  const cached = await redis.get(key);
+  
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
+  const data = await fetchFn();
+  await redis.setex(key, ttl, JSON.stringify(data));
+  
+  return data;
+}
+```
+
+### AWS Service Cost Optimization
+
+#### 1. DynamoDB Optimization
 
 **On-Demand vs Provisioned**:
 - Start with On-Demand for unpredictable workloads
@@ -2336,7 +2837,7 @@ const recentReadings = await dynamoClient.query({
 });
 ```
 
-#### 3. S3 Optimization
+#### 2. S3 Optimization
 
 **Lifecycle Policies**:
 ```json
@@ -2365,7 +2866,7 @@ const recentReadings = await dynamoClient.query({
 
 **Intelligent-Tiering**: Automatically moves objects between access tiers based on usage
 
-#### 4. AI Service Optimization
+#### 3. AI Service Optimization
 
 **Model Selection**:
 - Claude 3 Haiku: Simple tasks (food nutrient analysis) - $0.25/1M input tokens
@@ -2393,7 +2894,7 @@ const getNutrients = async (foodDescription: string): Promise<NutrientProfile> =
   const cacheKey = foodDescription.toLowerCase().trim();
   
   if (nutrientCache.has(cacheKey)) {
-    return nutrientCache.get(cacheKey);
+    return nutrientCache.get(cacheKey)!;
   }
   
   const nutrients = await analyzeWithBedrock(foodDescription);
@@ -2415,130 +2916,374 @@ const getNutrients = async (foodDescription: string): Promise<NutrientProfile> =
 
 | Service | Usage | Cost |
 |---------|-------|------|
-| Lambda | 50M requests, 1GB-sec avg | $25 |
+| **Compute** | | |
+| Render (2 Standard instances) | 2 instances | $14 |
+| *OR EC2 (2 t3.medium)* | *2 instances* | *$60* |
+| **Data Storage** | | |
 | DynamoDB | 10GB storage, 50M reads, 10M writes | $50 |
 | S3 | 500GB storage, 1M requests | $15 |
-| API Gateway | 50M requests | $50 |
-| Cognito | 10K MAU | $27.50 |
+| **AI Services** | | |
 | Bedrock (Claude 3 Haiku) | 100M tokens | $25 |
 | Bedrock (Claude 3 Sonnet) | 20M tokens | $60 |
 | Rekognition | 100K images | $100 |
 | Transcribe | 50K minutes | $75 |
+| **Other AWS Services** | | |
+| Cognito | 10K MAU | $27.50 |
 | CloudWatch | Logs + Metrics | $30 |
 | SNS/SES | 500K notifications | $10 |
-| **Total** | | **~$467.50/month** |
+| **Total (Render)** | | **~$406.50/month** |
+| **Total (EC2)** | | **~$452.50/month** |
 
 **Revenue Projection**:
 - 3,000 premium users × ₹430/month = ₹1,290,000/month (~$15,500/month)
 - **Profit Margin**: ~97%
 
+**Cost Savings vs Lambda**:
+- Lambda-based: ~$467.50/month
+- Express on Render: ~$406.50/month
+- **Savings**: ~$61/month (13% reduction)
+- **Additional Benefits**: Easier debugging, predictable performance, simpler architecture
+
 ## Deployment Strategy
 
-### Infrastructure as Code (AWS CDK)
+### Containerization with Docker
 
+**Dockerfile**:
+```dockerfile
+# Multi-stage build for optimized image size
+FROM node:18-alpine AS builder
 
-**Project Structure**:
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# Production image
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install PM2 globally
+RUN npm install -g pm2
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY ecosystem.config.js ./
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Start with PM2
+CMD ["pm2-runtime", "start", "ecosystem.config.js"]
 ```
-infrastructure/
-├── bin/
-│   └── app.ts
-├── lib/
-│   ├── stacks/
-│   │   ├── auth-stack.ts
-│   │   ├── api-stack.ts
-│   │   ├── data-stack.ts
-│   │   ├── ai-stack.ts
-│   │   ├── monitoring-stack.ts
-│   │   └── frontend-stack.ts
-│   ├── constructs/
-│   │   ├── lambda-function.ts
-│   │   ├── dynamodb-table.ts
-│   │   └── s3-bucket.ts
-│   └── config/
-│       ├── dev.ts
-│       ├── staging.ts
-│       └── prod.ts
-├── cdk.json
-└── package.json
+
+**docker-compose.yml** (for local development):
+```yaml
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AWS_REGION=ap-south-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      - DYNAMODB_USERS_TABLE=${DYNAMODB_USERS_TABLE}
+      - DYNAMODB_GLUCOSE_TABLE=${DYNAMODB_GLUCOSE_TABLE}
+      - DYNAMODB_FOOD_TABLE=${DYNAMODB_FOOD_TABLE}
+      - S3_FOOD_IMAGES_BUCKET=${S3_FOOD_IMAGES_BUCKET}
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    restart: unless-stopped
 ```
 
-**Example Stack**:
-```typescript
-// lib/stacks/data-stack.ts
-import * as cdk from 'aws-cdk-lib';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as kms from 'aws-cdk-lib/aws-kms';
+**PM2 Configuration (ecosystem.config.js)**:
+```javascript
+module.exports = {
+  apps: [{
+    name: 'ai-diet-api',
+    script: './dist/server.js',
+    instances: 'max', // Use all available CPU cores
+    exec_mode: 'cluster',
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    env_development: {
+      NODE_ENV: 'development',
+      PORT: 3000
+    },
+    error_file: './logs/error.log',
+    out_file: './logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    kill_timeout: 5000,
+    wait_ready: true,
+    listen_timeout: 10000
+  }]
+};
+```
 
-export class DataStack extends cdk.Stack {
-  public readonly usersTable: dynamodb.Table;
-  public readonly glucoseReadingsTable: dynamodb.Table;
-  public readonly foodLogsTable: dynamodb.Table;
-  public readonly foodImagesBucket: s3.Bucket;
-  
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
-    
-    // KMS key for encryption
-    const kmsKey = new kms.Key(this, 'DataEncryptionKey', {
-      enableKeyRotation: true,
-      description: 'KMS key for encrypting user health data'
-    });
-    
-    // Users table
-    this.usersTable = new dynamodb.Table(this, 'UsersTable', {
-      partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: kmsKey,
-      pointInTimeRecovery: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
-    
-    // Glucose readings table
-    this.glucoseReadingsTable = new dynamodb.Table(this, 'GlucoseReadingsTable', {
-      partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
-      encryptionKey: kmsKey,
-      pointInTimeRecovery: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
-    
-    // GSI for range queries
-    this.glucoseReadingsTable.addGlobalSecondaryIndex({
-      indexName: 'user_id-reading_value-index',
-      partitionKey: { name: 'user_id', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'reading_value', type: dynamodb.AttributeType.NUMBER }
-    });
-    
-    // Food images bucket
-    this.foodImagesBucket = new s3.Bucket(this, 'FoodImagesBucket', {
-      encryption: s3.BucketEncryption.KMS,
-      encryptionKey: kmsKey,
-      versioned: true,
-      lifecycleRules: [
-        {
-          transitions: [
-            {
-              storageClass: s3.StorageClass.INTELLIGENT_TIERING,
-              transitionAfter: cdk.Duration.days(30)
-            }
-          ],
-          expiration: cdk.Duration.days(730)
-        }
-      ],
-      cors: [
-        {
-          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST],
-          allowedOrigins: ['*'],  // Restrict in production
-          allowedHeaders: ['*']
-        }
-      ],
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL
-    });
+### Deployment Options
+
+#### Option 1: AWS EC2 with Auto Scaling
+
+**Architecture**:
+```
+Internet → ALB → Target Group → EC2 Instances (Auto Scaling Group)
+                                  ↓
+                              Docker + PM2
+```
+
+**Setup Steps**:
+1. Create EC2 Launch Template with Docker and application image
+2. Create Auto Scaling Group (min: 2, desired: 2, max: 10)
+3. Create Application Load Balancer with health checks
+4. Configure CloudWatch alarms for scaling policies
+5. Set up CodeDeploy for automated deployments
+
+**Auto Scaling Configuration**:
+```yaml
+# Auto Scaling Policy
+ScalingPolicy:
+  Type: AWS::AutoScaling::ScalingPolicy
+  Properties:
+    AutoScalingGroupName: !Ref AutoScalingGroup
+    PolicyType: TargetTrackingScaling
+    TargetTrackingConfiguration:
+      PredefinedMetricSpecification:
+        PredefinedMetricType: ASGAverageCPUUtilization
+      TargetValue: 70.0
+```
+
+**Estimated Cost**:
+- 2 t3.medium instances (baseline): ~$60/month
+- ALB: ~$20/month
+- Data transfer: ~$10/month
+- **Total**: ~$90/month (scales with traffic)
+
+#### Option 2: Render.com
+
+**Advantages**:
+- Managed platform (no infrastructure management)
+- Automatic SSL certificates
+- Built-in CI/CD from GitHub
+- Easy horizontal scaling
+- Health checks and auto-restart
+
+**render.yaml**:
+```yaml
+services:
+  - type: web
+    name: ai-diet-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: standard
+    numInstances: 2
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: COGNITO_USER_POOL_ID
+        sync: false
+      - key: COGNITO_CLIENT_ID
+        sync: false
+    autoDeploy: true
+```
+
+**Estimated Cost**:
+- 2 Standard instances: ~$14/month
+- **Total**: ~$14/month (very cost-effective)
+
+#### Option 3: Railway.app
+
+**Advantages**:
+- Simple deployment from GitHub
+- Automatic HTTPS
+- Built-in monitoring
+- Pay-per-use pricing
+- Easy environment management
+
+**railway.json**:
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 2,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
   }
+}
+```
+
+**Estimated Cost**:
+- ~$10-20/month depending on usage
+- **Total**: ~$15/month
+
+### Nginx Reverse Proxy Configuration
+
+**nginx.conf**:
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream api_backend {
+        least_conn;
+        server api:3000 max_fails=3 fail_timeout=30s;
+        keepalive 32;
+    }
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/m;
+    limit_req_zone $binary_remote_addr zone=ai_limit:10m rate=10r/m;
+
+    server {
+        listen 80;
+        server_name api.example.com;
+
+        # Redirect HTTP to HTTPS
+        return 301 https://$server_name$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name api.example.com;
+
+        # SSL configuration
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        # Security headers
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+
+        # Logging
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
+        # Health check (no rate limit)
+        location /health {
+            proxy_pass http://api_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            access_log off;
+        }
+
+        # API endpoints (standard rate limit)
+        location /api/ {
+            limit_req zone=api_limit burst=20 nodelay;
+
+            proxy_pass http://api_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+
+            # Timeouts
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        # AI endpoints (stricter rate limit)
+        location ~ ^/api/(food/recognize|ai/predict|ai/recommend) {
+            limit_req zone=ai_limit burst=5 nodelay;
+
+            proxy_pass http://api_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # Longer timeout for AI operations
+            proxy_connect_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_read_timeout 120s;
+        }
+    }
 }
 ```
 
@@ -2546,7 +3291,7 @@ export class DataStack extends cdk.Stack {
 
 **GitHub Actions Workflow**:
 ```yaml
-name: Deploy to AWS
+name: Deploy to Production
 
 on:
   push:
@@ -2567,123 +3312,142 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
           
       - name: Install dependencies
-        run: |
-          cd lambda
-          npm ci
-          
-      - name: Run unit tests
-        run: |
-          cd lambda
-          npm test
-          
-      - name: Run property-based tests
-        run: |
-          cd lambda
-          npm run test:property
+        run: npm ci
+        working-directory: ./server
           
       - name: Run linter
-        run: |
-          cd lambda
-          npm run lint
+        run: npm run lint
+        working-directory: ./server
           
       - name: Type check
-        run: |
-          cd lambda
-          npm run type-check
+        run: npm run type-check
+        working-directory: ./server
+          
+      - name: Run unit tests
+        run: npm run test:unit
+        working-directory: ./server
+          
+      - name: Run property-based tests
+        run: npm run test:property
+        working-directory: ./server
+          
+      - name: Run integration tests
+        run: npm run test:integration
+        working-directory: ./server
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}
+  
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./server
+          push: true
+          tags: |
+            myorg/ai-diet-api:latest
+            myorg/ai-diet-api:${{ github.sha }}
+          cache-from: type=registry,ref=myorg/ai-diet-api:buildcache
+          cache-to: type=registry,ref=myorg/ai-diet-api:buildcache,mode=max
   
   deploy-dev:
-    needs: test
+    needs: build
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: development
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-          
-      - name: Deploy CDK stacks
+      - name: Deploy to Render (Dev)
         run: |
-          cd infrastructure
-          npm ci
-          npm run cdk deploy -- --all --require-approval never --context env=dev
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_DEV }}
   
   deploy-prod:
-    needs: test
+    needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ap-south-1
-          
-      - name: Deploy CDK stacks
+      - name: Deploy to Render (Prod)
         run: |
-          cd infrastructure
-          npm ci
-          npm run cdk deploy -- --all --require-approval never --context env=prod
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_PROD }}
           
       - name: Run smoke tests
         run: |
+          sleep 60 # Wait for deployment
           npm run test:smoke
+        env:
+          API_URL: ${{ secrets.PROD_API_URL }}
+          
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment completed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
 ### Environment Configuration
 
 **Development**:
-- Single region: ap-south-1 (Mumbai)
-- Reduced Lambda memory (cost optimization)
-- CloudWatch log retention: 7 days
-- No WAF (cost optimization)
+- Single server instance
+- Local Docker Compose setup
+- Mock AWS services (LocalStack optional)
+- Hot reload enabled
+- Verbose logging
 
 **Staging**:
-- Single region: ap-south-1
+- 2 server instances
 - Production-like configuration
-- CloudWatch log retention: 30 days
-- WAF enabled
+- Real AWS services (separate account/resources)
+- Standard logging
 
 **Production**:
-- Primary region: ap-south-1 (Mumbai)
-- Backup region: us-east-1 (for disaster recovery)
-- Full Lambda memory allocation
-- CloudWatch log retention: 90 days
-- WAF enabled with all rules
-- CloudFront for API caching (optional)
+- 2-10 server instances (auto-scaling)
+- Full security hardening
+- Real AWS services (production account)
+- Structured logging with CloudWatch
+- Monitoring and alerting enabled
 
 ### Deployment Checklist
 
 **Pre-Deployment**:
 - [ ] All tests passing (unit, integration, property-based)
-- [ ] Security scan completed (Snyk, AWS Inspector)
+- [ ] Security scan completed (Snyk, npm audit)
 - [ ] Performance testing completed
-- [ ] Database migration scripts reviewed
+- [ ] Environment variables configured
+- [ ] SSL certificates valid
 - [ ] Rollback plan documented
 - [ ] Monitoring dashboards configured
 - [ ] Alerts configured and tested
 
 **Deployment**:
-- [ ] Deploy infrastructure changes (CDK)
-- [ ] Deploy Lambda functions
-- [ ] Run database migrations
-- [ ] Verify health checks
+- [ ] Build Docker image
+- [ ] Push to container registry
+- [ ] Deploy to target environment
+- [ ] Verify health checks passing
 - [ ] Run smoke tests
 - [ ] Monitor error rates and latency
+- [ ] Check CloudWatch logs
 
 **Post-Deployment**:
 - [ ] Verify all endpoints responding
-- [ ] Check CloudWatch metrics
+- [ ] Check application metrics
 - [ ] Review CloudWatch logs for errors
 - [ ] Test critical user flows
 - [ ] Monitor cost metrics
@@ -2692,22 +3456,40 @@ jobs:
 ### Rollback Strategy
 
 **Automated Rollback Triggers**:
+- Health check failures > 50% for 2 minutes
 - Error rate > 5% for 5 minutes
-- Latency p99 > 5 seconds for 5 minutes
-- Lambda throttling > 10% for 5 minutes
+- Response time p95 > 5 seconds for 5 minutes
 
 **Rollback Process**:
 ```bash
-# Rollback Lambda functions to previous version
-aws lambda update-alias \
-  --function-name MyFunction \
-  --name PROD \
-  --function-version $PREVIOUS_VERSION
+# Render/Railway: Rollback to previous deployment
+render rollback --service ai-diet-api
 
-# Rollback CDK stack
-cd infrastructure
-cdk deploy --all --context env=prod --rollback
+# EC2 with Docker: Deploy previous image
+docker pull myorg/ai-diet-api:previous-sha
+docker-compose up -d
+
+# Verify rollback
+curl https://api.example.com/health
 ```
+
+### Scaling Strategy
+
+**Horizontal Scaling**:
+- Add more server instances behind load balancer
+- Each instance runs PM2 in cluster mode (multi-process)
+- Stateless design allows seamless scaling
+
+**Vertical Scaling**:
+- Increase instance size (CPU/RAM)
+- Adjust PM2 instance count
+- Monitor memory usage and adjust max_memory_restart
+
+**Auto-Scaling Metrics**:
+- CPU utilization > 70%: Scale up
+- CPU utilization < 30%: Scale down
+- Request queue depth > 100: Scale up
+- Response time p95 > 3s: Scale up
 
 ## Error Handling
 
@@ -3329,11 +4111,202 @@ scenarios:
 
 ## Monitoring and Observability
 
+### Logging Strategy
+
+**Winston Logger Configuration**:
+```typescript
+// config/logger.ts
+import winston from 'winston';
+import CloudWatchTransport from 'winston-cloudwatch';
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: {
+    service: 'ai-diet-api',
+    environment: process.env.NODE_ENV
+  },
+  transports: [
+    // Console output (for local development and container logs)
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    }),
+    
+    // File output
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      maxsize: 10485760, // 10MB
+      maxFiles: 5
+    }),
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 10485760,
+      maxFiles: 5
+    }),
+    
+    // CloudWatch Logs (production)
+    ...(process.env.NODE_ENV === 'production' ? [
+      new CloudWatchTransport({
+        logGroupName: '/aws/express/ai-diet-api',
+        logStreamName: `${process.env.NODE_ENV}-${new Date().toISOString().split('T')[0]}`,
+        awsRegion: process.env.AWS_REGION,
+        jsonMessage: true
+      })
+    ] : [])
+  ]
+});
+
+export { logger };
+```
+
+**Request Logging Middleware**:
+```typescript
+// middleware/requestLogger.ts
+import { Request, Response, NextFunction } from 'express';
+import { logger } from '../config/logger';
+
+export function requestLogger(req: Request, res: Response, next: NextFunction): void {
+  const startTime = Date.now();
+  
+  // Log request
+  logger.info('Incoming request', {
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+  
+  // Log response
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    
+    logger.info('Request completed', {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      duration,
+      contentLength: res.get('content-length')
+    });
+    
+    // Log slow requests
+    if (duration > 3000) {
+      logger.warn('Slow request detected', {
+        method: req.method,
+        path: req.path,
+        duration
+      });
+    }
+  });
+  
+  next();
+}
+```
+
+### Application Metrics
+
+**Prometheus Metrics** (optional):
+```typescript
+// config/metrics.ts
+import promClient from 'prom-client';
+
+// Create a Registry
+const register = new promClient.Registry();
+
+// Add default metrics
+promClient.collectDefaultMetrics({ register });
+
+// Custom metrics
+export const httpRequestDuration = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.1, 0.5, 1, 2, 5, 10]
+});
+
+export const httpRequestTotal = new promClient.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code']
+});
+
+export const activeConnections = new promClient.Gauge({
+  name: 'active_connections',
+  help: 'Number of active connections'
+});
+
+export const aiRequestDuration = new promClient.Histogram({
+  name: 'ai_request_duration_seconds',
+  help: 'Duration of AI service requests',
+  labelNames: ['service', 'operation'],
+  buckets: [1, 3, 5, 10, 30, 60]
+});
+
+export const usageLimitHits = new promClient.Counter({
+  name: 'usage_limit_hits_total',
+  help: 'Number of times usage limits were hit',
+  labelNames: ['feature', 'tier']
+});
+
+register.registerMetric(httpRequestDuration);
+register.registerMetric(httpRequestTotal);
+register.registerMetric(activeConnections);
+register.registerMetric(aiRequestDuration);
+register.registerMetric(usageLimitHits);
+
+// Metrics endpoint
+export function metricsHandler(req: Request, res: Response): void {
+  res.set('Content-Type', register.contentType);
+  res.end(register.metrics());
+}
+```
+
+**Metrics Middleware**:
+```typescript
+// middleware/metrics.ts
+import { Request, Response, NextFunction } from 'express';
+import { httpRequestDuration, httpRequestTotal, activeConnections } from '../config/metrics';
+
+export function metricsMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const startTime = Date.now();
+  
+  activeConnections.inc();
+  
+  res.on('finish', () => {
+    const duration = (Date.now() - startTime) / 1000;
+    
+    httpRequestDuration.observe(
+      { method: req.method, route: req.route?.path || req.path, status_code: res.statusCode },
+      duration
+    );
+    
+    httpRequestTotal.inc({
+      method: req.method,
+      route: req.route?.path || req.path,
+      status_code: res.statusCode
+    });
+    
+    activeConnections.dec();
+  });
+  
+  next();
+}
+```
+
 ### CloudWatch Dashboards
 
-**Dashboard 1: System Health**
-- API Gateway request count, latency, errors
-- Lambda invocations, duration, errors, throttles
+**Dashboard 1: Server Health**
+- Request count, latency (p50, p95, p99), errors
+- Active connections, memory usage, CPU usage
+- PM2 process status and restarts
 - DynamoDB read/write capacity, throttles
 - AI service request count, latency, errors
 
@@ -3348,151 +4321,237 @@ scenarios:
 **Dashboard 3: Cost Metrics**
 - Estimated charges by service
 - AI service token usage
-- Lambda GB-seconds
+- Server instance costs
 - DynamoDB consumed capacity
+
+**CloudWatch Custom Metrics**:
+```typescript
+// services/cloudwatch.service.ts
+import { CloudWatchClient, PutMetricDataCommand } from '@aws-sdk/client-cloudwatch';
+
+const cloudwatch = new CloudWatchClient({ region: process.env.AWS_REGION });
+
+export async function publishMetric(
+  metricName: string,
+  value: number,
+  unit: string = 'Count',
+  dimensions: Record<string, string> = {}
+): Promise<void> {
+  try {
+    await cloudwatch.send(new PutMetricDataCommand({
+      Namespace: 'AIDietAPI',
+      MetricData: [{
+        MetricName: metricName,
+        Value: value,
+        Unit: unit,
+        Timestamp: new Date(),
+        Dimensions: Object.entries(dimensions).map(([Name, Value]) => ({ Name, Value }))
+      }]
+    }));
+  } catch (error) {
+    logger.error('Failed to publish metric', { error, metricName });
+  }
+}
+
+// Usage
+await publishMetric('UsageLimitHit', 1, 'Count', {
+  Feature: 'food_recognition',
+  Tier: 'free'
+});
+
+await publishMetric('AIRequestDuration', duration, 'Milliseconds', {
+  Service: 'bedrock',
+  Operation: 'predict_glucose'
+});
+```
 
 ### CloudWatch Alarms
 
 
 **Critical Alarms** (PagerDuty integration):
-- API error rate > 5% for 5 minutes
-- Lambda error rate > 10% for 5 minutes
+- Server error rate > 5% for 5 minutes
+- Response time p95 > 3 seconds for 10 minutes
 - DynamoDB throttling > 10 requests/minute
 - AI service availability < 95%
+- Health check failures > 50% for 2 minutes
 
 **Warning Alarms** (Email/Slack):
-- API latency p99 > 3 seconds for 10 minutes
-- Lambda duration p99 > 10 seconds for 10 minutes
+- Response time p95 > 2 seconds for 10 minutes
+- Memory usage > 80% for 10 minutes
+- CPU usage > 80% for 10 minutes
 - Estimated daily cost > $50
 - Free user approaching usage limit (80%)
 
 **Example Alarm Configuration**:
 ```typescript
-const apiErrorAlarm = new cloudwatch.Alarm(this, 'APIErrorAlarm', {
-  metric: apiGateway.metricServerError({
-    statistic: 'Sum',
-    period: cdk.Duration.minutes(5)
-  }),
-  threshold: 10,
-  evaluationPeriods: 1,
-  comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-  alarmDescription: 'API Gateway 5xx errors exceeded threshold',
-  actionsEnabled: true
-});
-
-apiErrorAlarm.addAlarmAction(new actions.SnsAction(alertTopic));
-```
-
-### Structured Logging
-
-**Log Format**:
-```typescript
-interface LogEntry {
-  timestamp: string;
-  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-  message: string;
-  context: {
-    request_id: string;
-    user_id?: string;
-    function_name: string;
-    function_version: string;
-  };
-  metadata?: Record<string, any>;
-  error?: {
-    message: string;
-    stack: string;
-    type: string;
-  };
-}
-
-// Logger implementation
-class Logger {
-  private context: LogContext;
-  
-  constructor(context: LogContext) {
-    this.context = context;
-  }
-  
-  info(message: string, metadata?: Record<string, any>) {
-    this.log('INFO', message, metadata);
-  }
-  
-  error(message: string, error?: Error, metadata?: Record<string, any>) {
-    this.log('ERROR', message, {
-      ...metadata,
-      error: error ? {
-        message: error.message,
-        stack: error.stack,
-        type: error.constructor.name
-      } : undefined
-    });
-  }
-  
-  private log(level: string, message: string, metadata?: Record<string, any>) {
-    const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
-      level,
-      message,
-      context: this.context,
-      metadata
-    };
-    
-    console.log(JSON.stringify(entry));
-  }
-}
-
-// Usage in Lambda
-export const handler = async (event: APIGatewayProxyEvent) => {
-  const logger = new Logger({
-    request_id: event.requestContext.requestId,
-    user_id: event.requestContext.authorizer?.userId,
-    function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
-    function_version: process.env.AWS_LAMBDA_FUNCTION_VERSION
-  });
-  
-  logger.info('Processing request', {
-    path: event.path,
-    method: event.httpMethod
-  });
-  
-  try {
-    // Business logic
-    const result = await processRequest(event);
-    
-    logger.info('Request completed successfully', {
-      duration_ms: Date.now() - startTime
-    });
-    
-    return successResponse(result);
-  } catch (error) {
-    logger.error('Request failed', error, {
-      duration_ms: Date.now() - startTime
-    });
-    
-    return errorResponse(error);
-  }
+// CloudWatch alarm for high error rate
+const errorRateAlarm = {
+  AlarmName: 'HighErrorRate',
+  ComparisonOperator: 'GreaterThanThreshold',
+  EvaluationPeriods: 1,
+  MetricName: 'ErrorRate',
+  Namespace: 'AIDietAPI',
+  Period: 300,
+  Statistic: 'Average',
+  Threshold: 5.0,
+  ActionsEnabled: true,
+  AlarmActions: [process.env.SNS_ALERT_TOPIC_ARN],
+  AlarmDescription: 'Alert when error rate exceeds 5%',
+  TreatMissingData: 'notBreaching'
 };
 ```
 
-### Distributed Tracing (X-Ray)
+### Health Check Endpoint
 
-**Configuration**:
 ```typescript
-import { captureAWS } from 'aws-xray-sdk-core';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
+// routes/health.routes.ts
+import { Router, Request, Response } from 'express';
+import { dynamoClient } from '../config/database';
+import { logger } from '../config/logger';
 
-// Wrap AWS SDK clients with X-Ray
-const dynamoClient = captureAWS(new DynamoDBClient({}));
-const bedrockClient = captureAWS(new BedrockRuntimeClient({}));
+const router = Router();
 
-// Custom subsegments for business logic
-import { captureAsyncFunc } from 'aws-xray-sdk-core';
-
-const processGlucoseReading = captureAsyncFunc('ProcessGlucoseReading', async (reading) => {
-  // Business logic here
-  // X-Ray will automatically track duration and errors
+router.get('/health', async (req: Request, res: Response) => {
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    checks: {
+      database: 'unknown',
+      aws: 'unknown'
+    }
+  };
+  
+  try {
+    // Check DynamoDB connection
+    await dynamoClient.send(new ListTablesCommand({ Limit: 1 }));
+    health.checks.database = 'healthy';
+  } catch (error) {
+    health.checks.database = 'unhealthy';
+    health.status = 'degraded';
+    logger.error('Health check: DynamoDB connection failed', { error });
+  }
+  
+  try {
+    // Check AWS credentials
+    const sts = new STSClient({ region: process.env.AWS_REGION });
+    await sts.send(new GetCallerIdentityCommand({}));
+    health.checks.aws = 'healthy';
+  } catch (error) {
+    health.checks.aws = 'unhealthy';
+    health.status = 'degraded';
+    logger.error('Health check: AWS credentials invalid', { error });
+  }
+  
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
+
+// Readiness check (for load balancer)
+router.get('/ready', (req: Request, res: Response) => {
+  res.status(200).json({ ready: true });
+});
+
+// Liveness check (for container orchestration)
+router.get('/live', (req: Request, res: Response) => {
+  res.status(200).json({ alive: true });
+});
+
+export default router;
+```
+
+### Error Tracking
+
+**Sentry Integration** (optional):
+```typescript
+// config/sentry.ts
+import * as Sentry from '@sentry/node';
+import { ProfilingIntegration } from '@sentry/profiling-node';
+
+export function initSentry(app: Express.Application): void {
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV,
+      integrations: [
+        new Sentry.Integrations.Http({ tracing: true }),
+        new Sentry.Integrations.Express({ app }),
+        new ProfilingIntegration()
+      ],
+      tracesSampleRate: 0.1,
+      profilesSampleRate: 0.1
+    });
+    
+    // Request handler must be the first middleware
+    app.use(Sentry.Handlers.requestHandler());
+    
+    // Tracing handler
+    app.use(Sentry.Handlers.tracingHandler());
+  }
+}
+
+// Error handler (add before your error handler middleware)
+export function sentryErrorHandler(): any {
+  return Sentry.Handlers.errorHandler();
+}
+```
+
+### Performance Monitoring
+
+**APM Tools** (optional):
+- **New Relic**: Full-stack observability
+- **Datadog**: Infrastructure and application monitoring
+- **Elastic APM**: Open-source alternative
+
+**Custom Performance Tracking**:
+```typescript
+// utils/performance.ts
+import { logger } from '../config/logger';
+
+export function trackPerformance<T>(
+  operation: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const startTime = Date.now();
+  
+  return fn()
+    .then(result => {
+      const duration = Date.now() - startTime;
+      
+      logger.info('Operation completed', {
+        operation,
+        duration,
+        success: true
+      });
+      
+      // Publish to CloudWatch
+      publishMetric(`${operation}Duration`, duration, 'Milliseconds');
+      
+      return result;
+    })
+    .catch(error => {
+      const duration = Date.now() - startTime;
+      
+      logger.error('Operation failed', {
+        operation,
+        duration,
+        error: error.message,
+        success: false
+      });
+      
+      // Publish to CloudWatch
+      publishMetric(`${operation}Error`, 1, 'Count');
+      
+      throw error;
+    });
+}
+
+// Usage
+const result = await trackPerformance(
+  'bedrock_predict_glucose',
+  () => bedrockService.predictGlucose(context)
+);
 ```
 
 ## Food Parser Implementation

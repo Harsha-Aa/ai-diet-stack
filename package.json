@@ -16,7 +16,10 @@
     "cdk:diff": "cdk diff",
     "cdk:synth": "cdk synth",
     "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"**/*.ts\""
+    "format": "prettier --write \"**/*.ts\"",
+    "dev:server": "cd local-server && npm install && npm start",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\""
   },
   "keywords": [
     "aws",
@@ -34,6 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
     "aws-cdk": "^2.133.0",
+    "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "jest": "^29.7.0",
     "prettier": "^3.2.5",

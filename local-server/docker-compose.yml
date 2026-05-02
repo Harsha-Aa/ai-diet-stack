@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      - DYNAMODB_USERS_TABLE=${DYNAMODB_USERS_TABLE}
+      - DYNAMODB_GLUCOSE_TABLE=${DYNAMODB_GLUCOSE_TABLE}
+      - DYNAMODB_FOOD_TABLE=${DYNAMODB_FOOD_TABLE}
+      - DYNAMODB_USAGE_TABLE=${DYNAMODB_USAGE_TABLE}
+      - DYNAMODB_ACTIVITY_TABLE=${DYNAMODB_ACTIVITY_TABLE}
+      - DYNAMODB_AI_INSIGHTS_TABLE=${DYNAMODB_AI_INSIGHTS_TABLE}
+      - S3_FOOD_IMAGES_BUCKET=${S3_FOOD_IMAGES_BUCKET}
+      - S3_REPORTS_BUCKET=${S3_REPORTS_BUCKET}
+      - S3_GLUCOSE_FILES_BUCKET=${S3_GLUCOSE_FILES_BUCKET}
+    volumes:
+      # Mount source code for hot reload during development
+      - ./src:/app/src
+      - ./logs:/app/logs
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+  # Optional: LocalStack for local AWS service emulation
+  # Uncomment to use LocalStack for local development without AWS credentials
+  # localstack:
+  #   image: localstack/localstack:latest
+  #   ports:
+  #     - "4566:4566"
+  #     - "4571:4571"
+  #   environment:
+  #     - SERVICES=dynamodb,s3,cognito-idp,sns,ses
+  #     - DEBUG=1
+  #     - DATA_DIR=/tmp/localstack/data
+  #   volumes:
+  #     - ./localstack-data:/tmp/localstack
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks:
+  #     - app-network
+
+  # Optional: Redis for caching (recommended for production-like local setup)
+  # Uncomment to enable Redis caching
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 3s
+  #     retries: 3
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+# Uncomment if using Redis
+# volumes:
+#   redis-data:

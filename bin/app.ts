@@ -98,6 +98,7 @@ const computeStack = new ComputeStack(app, `ComputeStack-${environmentName}`, {
   predictionsTable: dataStack.predictionsTable,
   foodImagesBucket: storageStack.foodImagesBucket,
   reportsBucket: storageStack.reportsBucket,
+  glucoseUploadsBucket: storageStack.glucoseUploadsBucket,
   api: apiStack.api,
   authorizer: apiStack.authorizer,
   // Secrets and parameters
