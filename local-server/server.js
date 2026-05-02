@@ -18,6 +18,54 @@ const mockGlucoseReadings = new Map();
 const mockFoodLogs = new Map();
 const mockUserProfiles = new Map();
 
+// Add a test user for easy login
+const testUserId = 'user-test-123';
+const testEmail = 'test@example.com';
+const testPassword = 'Test123!';
+
+mockUsers.set(testEmail, {
+  userId: testUserId,
+  email: testEmail,
+  password: testPassword,
+  age: 30,
+  weight_kg: 70,
+  height_cm: 170,
+  diabetes_type: 'type2',
+  bmi: 24.2,
+  tier: 'free',
+  createdAt: new Date().toISOString(),
+});
+
+mockUserProfiles.set(testUserId, {
+  userId: testUserId,
+  email: testEmail,
+  diabetesType: 'type2',
+  age: 30,
+  weight: 70,
+  height: 170,
+  bmi: 24.2,
+  tier: 'free',
+  targetGlucoseMin: 70,
+  targetGlucoseMax: 180,
+  createdAt: new Date().toISOString(),
+});
+
+// Add some sample glucose readings for the test user
+for (let i = 0; i < 20; i++) {
+  const timestamp = new Date(Date.now() - i * 12 * 60 * 60 * 1000).toISOString(); // Every 12 hours
+  const readingValue = Math.floor(Math.random() * 80) + 90; // Random value between 90-170
+  
+  mockGlucoseReadings.set(`${testUserId}-${timestamp}`, {
+    user_id: testUserId,
+    timestamp: timestamp,
+    reading_value_mgdl: readingValue,
+    reading_unit: 'mg/dL',
+    classification: readingValue < 70 ? 'low' : readingValue > 180 ? 'high' : 'in_range',
+    source: 'manual',
+    created_at: timestamp,
+  });
+}
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
