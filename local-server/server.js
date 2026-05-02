@@ -148,11 +148,15 @@ app.post('/auth/login', async (req, res) => {
     res.json({
       success: true,
       data: {
+        userId: user.userId,
+        email: user.email,
         accessToken: token,
         refreshToken: 'refresh-' + token,
         idToken: token,
         expiresIn: 3600,
         tokenType: 'Bearer',
+      },
+    });
       },
     });
   } catch (error) {
