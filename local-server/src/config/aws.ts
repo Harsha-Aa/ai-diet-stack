@@ -21,7 +21,7 @@ if (!credentials.accessKeyId || !credentials.secretAccessKey) {
 }
 
 // DynamoDB Client
-const dynamoClient = new DynamoDBClient({
+export const dynamoClient = new DynamoDBClient({
   region: AWS_REGION,
   credentials,
 });

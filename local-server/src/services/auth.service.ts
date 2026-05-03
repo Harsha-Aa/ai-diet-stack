@@ -65,7 +65,7 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
       weight: input.weight_kg,
       height: input.height_cm,
       bmi: Number(bmi.toFixed(1)),
-      subscriptionTier: 'free',
+      tier: 'free',
       targetGlucoseMin: 70,
       targetGlucoseMax: 180,
       createdAt: new Date().toISOString(),
