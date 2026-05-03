@@ -89,6 +89,8 @@ app.post('/auth/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error.message);
+    console.error('Full error:', error);
+    console.error('Error stack:', error.stack);
 
     if (error.message.includes('already exists')) {
       return res.status(400).json({
@@ -99,7 +101,7 @@ app.post('/auth/register', async (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to register user' },
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to register user', details: error.message },
     });
   }
 });
@@ -136,6 +138,7 @@ app.post('/auth/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error.message);
+    console.error('Full error:', error);
 
     if (error.message.includes('Invalid credentials') || error.message.includes('Incorrect username or password')) {
       return res.status(401).json({
@@ -146,7 +149,7 @@ app.post('/auth/login', async (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: { code: 'INTERNAL_ERROR', message: 'Failed to authenticate' },
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to authenticate', details: error.message },
     });
   }
 });
