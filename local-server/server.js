@@ -34,6 +34,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// AWS configuration check endpoint (for debugging)
+app.get('/debug/aws-config', (req, res) => {
+  res.json({
+    aws_region: process.env.AWS_REGION || 'not set',
+    aws_access_key_configured: !!process.env.AWS_ACCESS_KEY_ID,
+    cognito_user_pool_id: process.env.COGNITO_USER_POOL_ID || 'not set',
+    cognito_client_id: process.env.COGNITO_CLIENT_ID || 'not set',
+    dynamodb_users_table: process.env.DYNAMODB_USERS_TABLE || 'not set',
+    enable_aws_services: process.env.ENABLE_AWS_SERVICES || 'not set',
+    use_mock_data: process.env.USE_MOCK_DATA || 'not set',
+  });
+});
+
 // ============================================================================
 // AUTHENTICATION ENDPOINTS (Cognito Integration)
 // ============================================================================
