@@ -30,6 +30,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     aws_integration: 'enabled',
+    version: '2.0.0',
   });
 });
 
