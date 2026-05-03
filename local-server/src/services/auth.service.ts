@@ -33,10 +33,17 @@ export interface AuthResponse {
   expiresIn: number;
 }
 
+export interface RegisterResponse {
+  userId: string;
+  email: string;
+  tier: string;
+  message?: string;
+}
+
 /**
  * Register a new user with Cognito and create profile in DynamoDB
  */
-export async function register(input: RegisterInput): Promise<AuthResponse> {
+export async function register(input: RegisterInput): Promise<RegisterResponse> {
   try {
     // Step 1: Register user in Cognito
     const signUpCommand = new SignUpCommand({
@@ -72,13 +79,13 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
       updatedAt: new Date().toISOString(),
     });
 
-    // Step 4: Auto-login after registration
-    const loginResponse = await login({
+    // Return success without auto-login (user needs to confirm email first)
+    return {
+      userId,
       email: input.email,
-      password: input.password,
-    });
-
-    return loginResponse;
+      tier: 'free',
+      message: 'Registration successful. Please check your email to confirm your account.',
+    };
   } catch (error: any) {
     console.error('Registration error:', error);
     

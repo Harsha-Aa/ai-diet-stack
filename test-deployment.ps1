@@ -30,7 +30,7 @@ try {
 Write-Host "`n[Test 2] User Registration..." -ForegroundColor Yellow
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $testEmail = "test-$timestamp@example.com"
-$testPassword = "Test123!"
+$testPassword = "TestPassword123!"
 
 $registerBody = @{
     email = $testEmail
