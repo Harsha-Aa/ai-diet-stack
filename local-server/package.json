@@ -2,7 +2,7 @@
   "name": "local-server",
   "version": "1.0.0",
   "description": "Local development server for Lambda functions",
-  "main": "server.ts",
+  "main": "server.js",
   "scripts": {
     "build": "tsc",
     "start": "node server.js",
