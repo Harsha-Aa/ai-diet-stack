@@ -22,7 +22,7 @@ export const config = {
     
     // DynamoDB Tables
     tables: {
-      users: process.env.DYNAMODB_USERS_TABLE || 'dev-ai-diet-users',
+      users: process.env.DYNAMODB_USER_PROFILES_TABLE || 'dev-ai-diet-user-profiles',
       userProfiles: process.env.DYNAMODB_USER_PROFILES_TABLE || 'dev-ai-diet-user-profiles',
       glucoseReadings: process.env.DYNAMODB_GLUCOSE_TABLE || 'dev-ai-diet-glucose-readings',
       foodLogs: process.env.DYNAMODB_FOOD_LOGS_TABLE || 'dev-ai-diet-food-logs',
